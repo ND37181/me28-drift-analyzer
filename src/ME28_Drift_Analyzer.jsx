@@ -1,659 +1,702 @@
 import { useState, useCallback, useRef } from "react";
 
-// ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const M1 = 0x8000;
 const M2 = 0x60000;
 
 const SW_VARIANTS = {
-  "87200000": { label: "87200000", engine: "5.0L", gen: "Gen1 (37/00)", addrShift: -0x027C },
-  "88200000": { label: "88200000", engine: "5.5L", gen: "Gen2 (37/01)", addrShift: 0 },
-  "88800000": { label: "88800000", engine: "5.0L", gen: "Gen3 (37/02)", addrShift: 0 },
-  "88200001": { label: "88200001", engine: "5.5L", gen: "Gen2-B",       addrShift: 0 },
+  "87200000": { label:"87200000", engine:"5.0L", gen:"Gen1 (37/00)", addrShift:-0x027C },
+  "88200000": { label:"88200000", engine:"5.5L", gen:"Gen2 (37/01)", addrShift:0 },
+  "88200001": { label:"88200001", engine:"5.5L", gen:"Gen2-B",        addrShift:0 },
+  "88800000": { label:"88800000", engine:"5.0L", gen:"Gen3 (37/02)", addrShift:0 },
 };
 
-// Reference SW = 88x00000 (88800000 / 88200000)
+const REGIONS = [
+  { start:0x00000, end:0x07FFF, name:"Programmcode A",            risk:"code",   color:"#4a4a4a" },
+  { start:0x08000, end:0x0FFFF, name:"Programmcode B",            risk:"code",   color:"#4a4a4a" },
+  { start:0x10000, end:0x1049F, name:"Klopferkennung (KEF*)",     risk:"low",    color:"#94a3b8" },
+  { start:0x104A0, end:0x105E7, name:"Klopf-Messfenster",         risk:"low",    color:"#94a3b8" },
+  { start:0x105E8, end:0x10627, name:"EGR (KFAGR)",               risk:"drift",  color:"#34d399" },
+  { start:0x10628, end:0x10CFF, name:"Klopf / Diagnose",          risk:"low",    color:"#94a3b8" },
+  { start:0x10D00, end:0x10DFF, name:"CAN-ASR Torque (KFMDRED)",  risk:"drift",  color:"#ff3c3c" },
+  { start:0x10E00, end:0x117D2, name:"Drehmomentkennfelder",       risk:"medium", color:"#f59e0b" },
+  { start:0x117D3, end:0x126E3, name:"Lambda / Einspritzung",     risk:"medium", color:"#60a5fa" },
+  { start:0x126E4, end:0x12863, name:"Zuendwinkel KFZWZA",        risk:"timing", color:"#fbbf24" },
+  { start:0x12864, end:0x12DC1, name:"Zuendwinkel KFZW",          risk:"timing", color:"#fbbf24" },
+  { start:0x12DC2, end:0x12DDF, name:"NMAX Hard-Limiter",         risk:"drift",  color:"#ff3c3c" },
+  { start:0x12DE0, end:0x132A1, name:"Misc Kennfelder",           risk:"low",    color:"#94a3b8" },
+  { start:0x132A2, end:0x132A5, name:"Schubabschaltung (SAS)",    risk:"drift",  color:"#ff3c3c" },
+  { start:0x132A6, end:0x13B9F, name:"Lambda / Misc",             risk:"low",    color:"#94a3b8" },
+  { start:0x13BA0, end:0x13BA3, name:"Wandlerschutz (VNMAX*)",    risk:"drift",  color:"#f472b6" },
+  { start:0x13BA4, end:0x15133, name:"Misc Kennfelder",           risk:"low",    color:"#94a3b8" },
+  { start:0x15134, end:0x1513F, name:"Geschw.-Begrenzer (KSVMAX)",risk:"drift",  color:"#ff3c3c" },
+  { start:0x15140, end:0x15547, name:"Pedal / Fahrerwunsch",      risk:"medium", color:"#60a5fa" },
+  { start:0x15548, end:0x16547, name:"Misc Kennfelder",           risk:"low",    color:"#94a3b8" },
+  { start:0x16548, end:0x16548, name:"TMASR ASR-Temperatur",      risk:"drift",  color:"#f472b6" },
+  { start:0x16549, end:0x16B05, name:"Diverse",                   risk:"low",    color:"#94a3b8" },
+  { start:0x16B06, end:0x16B50, name:"Soft-Limiter Block",        risk:"drift",  color:"#ff3c3c" },
+  { start:0x16B51, end:0x17FFF, name:"Misc Kennfelder",           risk:"low",    color:"#94a3b8" },
+  { start:0x18000, end:0x1FFFF, name:"Mirror 1",                  risk:"mirror", color:"#2a2a3a" },
+  { start:0x20000, end:0x6FFFF, name:"ROM / Programmcode",        risk:"code",   color:"#3a3a3a" },
+  { start:0x70000, end:0x77FFF, name:"Mirror 2",                  risk:"mirror", color:"#2a2a3a" },
+  { start:0x78000, end:0x7FFFF, name:"Boot / Checksummen",        risk:"info",   color:"#555" },
+];
+
+const RISK_LABEL = { drift:"DRIFT", timing:"TIMING", medium:"KENNFELD", low:"NEBEN", code:"CODE", mirror:"MIRROR", info:"INFO" };
+const RISK_COLOR = { drift:"#ff3c3c", timing:"#fbbf24", medium:"#f59e0b", low:"#555", code:"#444", mirror:"#333", info:"#60a5fa" };
+
 const PARAMS = [
-  // ── NMAX Hard-Limiter ──────────────────────────────────
-  { id:"NMAXAT",    addr:0x12DC2, size:2, cat:"NMAX",  label:"NMAXAT",    unit:"rpm", drift_soll:6600, stock_range:[100,300],  desc:"Automatik-Limiter" },
-  { id:"NMAXD",     addr:0x12DC4, size:2, cat:"NMAX",  label:"NMAXD",     unit:"rpm", drift_soll:6600, stock_range:[80,200],   desc:"Drive-Limiter" },
-  { id:"NMAXGNL",   addr:0x12DC6, size:2, cat:"NMAX",  label:"NMAXGNL",   unit:"rpm", drift_soll:6600, stock_range:[80,200],   desc:"Gang N/L" },
-  { id:"NMAXK",     addr:0x12DC8, size:2, cat:"NMAX",  label:"NMAXK",     unit:"rpm", drift_soll:6600, stock_range:[80,200],   desc:"Kick-down" },
-  { id:"NMAXR",     addr:0x12DCA, size:2, cat:"NMAX",  label:"NMAXR",     unit:"rpm", drift_soll:6600, stock_range:[80,200],   desc:"Rückwärts" },
-  { id:"NMAXWF",    addr:0x12DDC, size:2, cat:"NMAX",  label:"NMAXWF",    unit:"rpm", drift_soll:6500, stock_range:[60,120],   desc:"Wählhebel frei" },
-  // ── Soft-Limiter ───────────────────────────────────────
-  { id:"FWNMAXWF",  addr:0x16B06, size:2, cat:"SOFT",  label:"FWNMAXWF",  unit:"rpm", drift_soll:6500, stock_range:[4000,5200], desc:"Soft-Max Wählhebel frei" },
-  { id:"FWNTOEL",   addr:0x16B08, size:2, cat:"SOFT",  label:"FWNTOEL",   unit:"rpm", drift_soll:6500, stock_range:[4000,5200], desc:"Öl-Temp Limiter" },
-  { id:"FWTNMAXK",  addr:0x16B12, size:2, cat:"SOFT",  label:"FWTNMAXK",  unit:"ms",  drift_soll:200,  stock_range:[1000,5000], desc:"Rampenzeit Max-K" },
-  { id:"FWTRAMP",   addr:0x16B14, size:2, cat:"SOFT",  label:"FWTRAMP",   unit:"ms",  drift_soll:200,  stock_range:[1000,5000], desc:"Rampenzeit" },
-  { id:"FWVMAXD",   addr:0x16B16, size:2, cat:"SOFT",  label:"FWVMAXD",   unit:"",    drift_soll:0,    stock_range:[1000,5000], desc:"Speed-Max Drive" },
-  { id:"FWVMAXR",   addr:0x16B18, size:2, cat:"SOFT",  label:"FWVMAXR",   unit:"",    drift_soll:0,    stock_range:[1000,5000], desc:"Speed-Max Rück" },
-  { id:"FWWNMAXD",  addr:0x16B1A, size:2, cat:"SOFT",  label:"FWWNMAXD",  unit:"rpm", drift_soll:6400, stock_range:[4000,5500], desc:"W-Max Drive" },
-  { id:"FWWNMAXKA", addr:0x16B1C, size:2, cat:"SOFT",  label:"FWWNMAXKA", unit:"rpm", drift_soll:6600, stock_range:[4000,5500], desc:"W-Max KA" },
-  { id:"FWWNMAXKH", addr:0x16B1E, size:2, cat:"SOFT",  label:"FWWNMAXKH", unit:"rpm", drift_soll:6600, stock_range:[4000,5500], desc:"W-Max KH" },
-  { id:"FWWNMAXR",  addr:0x16B20, size:2, cat:"SOFT",  label:"FWWNMAXR",  unit:"rpm", drift_soll:6200, stock_range:[4000,5500], desc:"W-Max Rück" },
-  { id:"KLAMDRED",  addr:0x16B22, size:2, cat:"SOFT",  label:"KLAMDRED",  unit:"",    drift_soll:0,    stock_range:[1,9999],    desc:"Lambda-Reduktion" },
-  // VMAXOG 0-7
-  ...Array.from({length:8},(_,i)=>({
-    id:`VMAXOG${i}`, addr:0x16B32+i*2, size:2, cat:"SOFT",
-    label:`VMAXOG[${i}]`, unit:"", drift_soll:0xFFFF, stock_range:[0,5000],
-    desc:"Gang-Speed-Max"
-  })),
-  // ── Geschwindigkeitsbegrenzer ──────────────────────────
-  ...Array.from({length:6},(_,i)=>({
-    id:`KSVMAX${i}`, addr:0x15134+i*2, size:2, cat:"VMAX",
-    label:`KSVMAX[${i}]`, unit:"×0.1 km/h", drift_soll:0xFFFF, stock_range:[1500,2000],
-    desc:"Geschwindigkeitsbegrenzer"
-  })),
-  // ── Schubabschaltung ───────────────────────────────────
-  { id:"SWSCHUB3", addr:0x132A2, size:2, cat:"SAS", label:"SWSCHUB3", unit:"", drift_soll:0, stock_range:[1,9999], desc:"SAS Enable" },
-  { id:"SWSCHUB4", addr:0x132A4, size:2, cat:"SAS", label:"SWSCHUB4", unit:"", drift_soll:0, stock_range:[1,9999], desc:"SAS Hysterese" },
-  // ── Wandlerschutz ──────────────────────────────────────
-  { id:"VNMAXRF",  addr:0x13BA2, size:1, cat:"ATF",  label:"VNMAXRF",  unit:"", drift_soll:0, stock_range:[1,255], desc:"Wandlerschutz RF" },
-  // ── ASR ────────────────────────────────────────────────
-  { id:"TMASR",    addr:0x16548, size:1, cat:"ASR",  label:"TMASR",    unit:"°C", drift_soll:255, stock_range:[25,80], desc:"ASR Temp-Threshold" },
+  { id:"NMAXAT",    addr:0x12DC2,size:2,cat:"NMAX",label:"NMAXAT",   unit:"rpm",drift_soll:6600, stock_range:[100,300] },
+  { id:"NMAXD",     addr:0x12DC4,size:2,cat:"NMAX",label:"NMAXD",    unit:"rpm",drift_soll:6600, stock_range:[80,200] },
+  { id:"NMAXGNL",   addr:0x12DC6,size:2,cat:"NMAX",label:"NMAXGNL",  unit:"rpm",drift_soll:6600, stock_range:[80,200] },
+  { id:"NMAXK",     addr:0x12DC8,size:2,cat:"NMAX",label:"NMAXK",    unit:"rpm",drift_soll:6600, stock_range:[80,200] },
+  { id:"NMAXR",     addr:0x12DCA,size:2,cat:"NMAX",label:"NMAXR",    unit:"rpm",drift_soll:6600, stock_range:[80,200] },
+  { id:"NMAXWF",    addr:0x12DDC,size:2,cat:"NMAX",label:"NMAXWF",   unit:"rpm",drift_soll:6500, stock_range:[60,120] },
+  { id:"FWNMAXWF",  addr:0x16B06,size:2,cat:"SOFT",label:"FWNMAXWF", unit:"rpm",drift_soll:6500, stock_range:[4000,5200] },
+  { id:"FWNTOEL",   addr:0x16B08,size:2,cat:"SOFT",label:"FWNTOEL",  unit:"rpm",drift_soll:6500, stock_range:[4000,5200] },
+  { id:"FWTNMAXK",  addr:0x16B12,size:2,cat:"SOFT",label:"FWTNMAXK", unit:"ms", drift_soll:200,  stock_range:[1000,5000] },
+  { id:"FWTRAMP",   addr:0x16B14,size:2,cat:"SOFT",label:"FWTRAMP",  unit:"ms", drift_soll:200,  stock_range:[1000,5000] },
+  { id:"FWVMAXD",   addr:0x16B16,size:2,cat:"SOFT",label:"FWVMAXD",  unit:"",   drift_soll:0,    stock_range:[1,9999] },
+  { id:"FWVMAXR",   addr:0x16B18,size:2,cat:"SOFT",label:"FWVMAXR",  unit:"",   drift_soll:0,    stock_range:[1,9999] },
+  { id:"FWWNMAXD",  addr:0x16B1A,size:2,cat:"SOFT",label:"FWWNMAXD", unit:"rpm",drift_soll:6400, stock_range:[4000,5500] },
+  { id:"FWWNMAXKA", addr:0x16B1C,size:2,cat:"SOFT",label:"FWWNMAXKA",unit:"rpm",drift_soll:6600, stock_range:[4000,5500] },
+  { id:"FWWNMAXKH", addr:0x16B1E,size:2,cat:"SOFT",label:"FWWNMAXKH",unit:"rpm",drift_soll:6600, stock_range:[4000,5500] },
+  { id:"FWWNMAXR",  addr:0x16B20,size:2,cat:"SOFT",label:"FWWNMAXR", unit:"rpm",drift_soll:6200, stock_range:[4000,5500] },
+  { id:"KLAMDRED",  addr:0x16B22,size:2,cat:"SOFT",label:"KLAMDRED", unit:"",   drift_soll:0,    stock_range:[1,9999] },
+  ...Array.from({length:8},(_,i)=>({ id:"VMAXOG"+i, addr:0x16B32+i*2, size:2, cat:"SOFT", label:"VMAXOG["+i+"]", unit:"", drift_soll:0xFFFF, stock_range:[0,5000] })),
+  ...Array.from({length:6},(_,i)=>({ id:"KSVMAX"+i, addr:0x15134+i*2, size:2, cat:"VMAX", label:"KSVMAX["+i+"]", unit:"km/h*10", drift_soll:0xFFFF, stock_range:[1500,2000] })),
+  { id:"SWSCHUB3",  addr:0x132A2,size:2,cat:"SAS", label:"SWSCHUB3", unit:"",   drift_soll:0,    stock_range:[1,9999] },
+  { id:"SWSCHUB4",  addr:0x132A4,size:2,cat:"SAS", label:"SWSCHUB4", unit:"",   drift_soll:0,    stock_range:[1,9999] },
+  { id:"VNMAXRF",   addr:0x13BA2,size:1,cat:"ATF", label:"VNMAXRF",  unit:"",   drift_soll:0,    stock_range:[1,255] },
+  { id:"TMASR",     addr:0x16548,size:1,cat:"ASR", label:"TMASR",    unit:"C",  drift_soll:255,  stock_range:[25,80] },
 ];
 
-// Kennfelder (multi-byte)
 const MAPS = [
-  { id:"KFAGR",   addr:0x105E8, size:64,  cat:"EGR",    label:"KFAGR",    desc:"Abgasrückführung [8×8]",     drift_check:"all_zero" },
-  { id:"KFMDRED", addr:0x10D52, size:74,  cat:"CAN_ASR",label:"KFMDRED",  desc:"CAN-ASR Torque-Reduction",   drift_check:"all_ffff_word", word_count:37 },
-  { id:"KFTORQ2", addr:0x153C8, size:24,  cat:"CAN_ASR",label:"Torque2",  desc:"Sekundäre Torque-Tabelle",   drift_check:"all_ffff_word", word_count:12 },
-  { id:"KFZW",    addr:0x12864, size:256, cat:"IGN",    label:"KFZW",     desc:"Zündwinkel Hauptkennfeld [16×16]", drift_check:"timing" },
-  { id:"KFZWZA",  addr:0x126E4, size:256, cat:"IGN",    label:"KFZWZA",   desc:"Zündwinkel ZA [16×16]",      drift_check:"timing" },
+  { id:"KFAGR",   addr:0x105E8, size:64,  cat:"EGR",     label:"KFAGR",  desc:"AGR [8x8]",            check:"all_zero" },
+  { id:"KFMDRED", addr:0x10D52, size:74,  cat:"CAN_ASR", label:"KFMDRED",desc:"CAN-ASR Torque [37W]", check:"ffff_word", wc:37 },
+  { id:"KFTORQ2", addr:0x153C8, size:24,  cat:"CAN_ASR", label:"Torque2",desc:"Torque2 [12W]",         check:"ffff_word", wc:12 },
+  { id:"KFZW",    addr:0x12864, size:256, cat:"IGN",      label:"KFZW",   desc:"Zuendwinkel [16x16]",  check:"timing" },
+  { id:"KFZWZA",  addr:0x126E4, size:256, cat:"IGN",      label:"KFZWZA", desc:"Zuendwinkel ZA [16x16]",check:"timing" },
 ];
 
-// ─── ANALYSIS ENGINE ─────────────────────────────────────────────────────────
-function readU16LE(buf, addr) {
-  if (addr+1 >= buf.length) return null;
-  return buf[addr] | (buf[addr+1] << 8);
-}
-function readU8(buf, addr) {
-  if (addr >= buf.length) return null;
-  return buf[addr];
-}
+const ru16 = (b,a) => (a+1<b.length) ? b[a]|(b[a+1]<<8) : 0;
+const ru8  = (b,a) => (a<b.length)   ? b[a] : 0;
 
 function detectSW(buf) {
-  const strAt = (addr, len=12) => {
-    const bytes = buf.slice(addr, addr+len);
-    return String.fromCharCode(...bytes.filter(b=>b>31&&b<127));
-  };
-  const s = strAt(0x7FFB0, 30);
-  for (const [key, info] of Object.entries(SW_VARIANTS)) {
-    if (s.includes(key)) return { sw: key, ...info, raw: s.trim() };
-  }
-  // Try 0x1FFEF area (Mirror1)
-  const s2 = strAt(0x1FFEF, 20);
-  for (const [key, info] of Object.entries(SW_VARIANTS)) {
-    if (s2.includes(key)) return { sw: key, ...info, raw: s2.trim() };
-  }
-  return { sw:"UNKNOWN", label:"?", engine:"?", gen:"?", addrShift:0, raw: s.trim() };
+  const s = String.fromCharCode(...Array.from(buf.slice(0x7FFB0,0x7FFC0)).filter(b=>b>31&&b<127));
+  for (const [k,v] of Object.entries(SW_VARIANTS)) if (s.includes(k)) return {...v,raw:s.trim()};
+  return {label:"UNKNOWN",engine:"?",gen:"?",addrShift:0,raw:s.trim()};
 }
-
-function getPartnr(buf) {
-  const bytes = buf.slice(0x7FFE9, 0x7FFF5);
-  return bytes.filter(b=>b>47&&b<58||b>64&&b<91||b>96&&b<123)
-    .map(b=>String.fromCharCode(b)).join('');
+function getPartNr(buf) {
+  return String.fromCharCode(...Array.from(buf.slice(0x7FFE9,0x7FFF5)).filter(b=>(b>47&&b<58)||(b>64&&b<91)||(b>96&&b<123)));
 }
-
-function analyzeParam(buf, p, shift) {
-  const addr = p.addr + shift;
-  if (addr < 0 || addr+p.size > buf.length) return { valid:false, value:null };
-  const value = p.size === 2 ? readU16LE(buf, addr) : readU8(buf, addr);
-  const m1v   = p.size === 2 ? readU16LE(buf, addr+M1) : readU8(buf, addr+M1);
-  const m2v   = p.size === 2 ? readU16LE(buf, addr+M2) : readU8(buf, addr+M2);
-  const mirrorOk = value === m1v && value === m2v;
-  const isDriftOk = value === p.drift_soll;
-  const isStock = value >= p.stock_range[0] && value <= p.stock_range[1];
-  let status = "unknown";
-  if (isDriftOk) status = "ok";
-  else if (isStock) status = "stock";
-  else status = "bad";
-  return { valid:true, value, m1:m1v, m2:m2v, mirrorOk, isDriftOk, isStock, status };
-}
-
-function analyzeMap(buf, m, shift) {
-  const addr = m.addr + shift;
-  if (addr < 0 || addr+m.size > buf.length) return { valid:false };
-
-  if (m.drift_check === "all_zero") {
-    const nonZero = [];
-    for (let i=0;i<m.size;i++) if (buf[addr+i]!==0) nonZero.push(i);
-    const status = nonZero.length===0 ? "ok" : "bad";
-    return { valid:true, status, detail: `${nonZero.length}/${m.size} Bytes ≠ 0` };
-  }
-  if (m.drift_check === "all_ffff_word") {
-    const bad = [];
-    for (let i=0;i<m.word_count;i++) {
-      const v = readU16LE(buf, addr+i*2);
-      if (v !== 0xFFFF) bad.push(i);
-    }
-    const status = bad.length===0 ? "ok" : "bad";
-    return { valid:true, status, detail: `${bad.length}/${m.word_count} Wörter ≠ 0xFFFF` };
-  }
-  if (m.drift_check === "timing") {
-    // Compare vs raw values — check for near-zero (bad) or reasonable range
-    const vals = [];
-    for (let i=0;i<m.size;i++) vals.push(buf[addr+i]);
-    const avg = vals.reduce((a,b)=>a+b,0)/vals.length;
-    const zeros = vals.filter(v=>v===0).length;
-    // Mirror check
-    const m1Diffs = vals.filter((_,i)=>buf[addr+i] !== buf[addr+M1+i]).length;
-    const m2Diffs = vals.filter((_,i)=>buf[addr+i] !== buf[addr+M2+i]).length;
-    const mirrorOk = m1Diffs===0 && m2Diffs===0;
-    const status = zeros > 200 ? "bad" : avg < 10 ? "bad" : "info";
-    const deg = (avg * 0.75).toFixed(1);
-    return { valid:true, status, detail:`Ø ${deg}° (${avg.toFixed(1)} raw)`, mirrorOk, zeros, avg };
-  }
-  return { valid:false };
-}
-
-function mirrorConsistency(buf) {
-  let diff12=0, diff13=0;
+function mirrorCheck(buf) {
+  let d12=0, d13=0;
   for (let i=0;i<0x8000;i++) {
-    if (buf[0x10000+i] !== buf[0x10000+i+M1]) diff12++;
-    if (0x10000+i+M2 < buf.length && buf[0x10000+i] !== buf[0x10000+i+M2]) diff13++;
+    if (buf[0x10000+i] !== buf[0x10000+i+M1]) d12++;
+    if (0x10000+i+M2 < buf.length && buf[0x10000+i] !== buf[0x10000+i+M2]) d13++;
   }
-  return { diff12, diff13, ok: diff12<100 && diff13<100 };
+  return {d12, d13, ok: d12<100 && d13<100};
 }
 
-function runAnalysis(buf) {
-  const sw = detectSW(buf);
-  const shift = sw.addrShift || 0;
-  const partNr = getPartnr(buf);
-  const mirror = mirrorConsistency(buf);
+function classifyAddr(addr) {
+  for (const r of REGIONS) if (addr>=r.start && addr<=r.end) return r;
+  return {name:"Unbekannt",risk:"low",color:"#555"};
+}
 
-  const params = PARAMS.map(p => ({ ...p, result: analyzeParam(buf, p, shift) }));
-  const maps   = MAPS.map(m  => ({ ...m,  result: analyzeMap(buf, m, shift)   }));
+function computeDiff(ref, tune) {
+  const GAP=32, blocks=[];
+  let cur=null;
+  for (let i=0; i<Math.min(ref.length,tune.length); i++) {
+    if (ref[i]!==tune[i]) {
+      if (!cur) cur={start:i,end:i,changed:1};
+      else { cur.end=i; cur.changed++; }
+    } else if (cur && (i-cur.end)>GAP) {
+      blocks.push({...cur, total:cur.end-cur.start+1});
+      cur=null;
+    }
+  }
+  if (cur) blocks.push({...cur, total:cur.end-cur.start+1});
+  return blocks.map(b=>({
+    ...b,
+    pct: Math.round(b.changed/(b.end-b.start+1)*100),
+    region: classifyAddr(b.start),
+  })).sort((a,b)=>{
+    const o={drift:0,timing:1,medium:2,low:3,mirror:4,code:5,info:6};
+    return (o[a.region.risk]||9)-(o[b.region.risk]||9);
+  });
+}
 
-  // Quality score
-  const driftParams = params.filter(p=>p.result.valid);
-  const okCount = driftParams.filter(p=>p.result.status==="ok").length;
-  const badCount = driftParams.filter(p=>p.result.status==="bad").length;
-  const mirrorBad = driftParams.filter(p=>!p.result.mirrorOk).length;
-  const mapOk = maps.filter(m=>m.result.status==="ok").length;
+function analyzeParam(buf, p, shift, ref) {
+  const addr = p.addr+shift;
+  if (addr<0 || addr+p.size>buf.length) return {valid:false};
+  const value    = p.size===2 ? ru16(buf,addr) : ru8(buf,addr);
+  const m1v      = p.size===2 ? ru16(buf,addr+M1) : ru8(buf,addr+M1);
+  const m2v      = p.size===2 ? ru16(buf,addr+M2) : ru8(buf,addr+M2);
+  const refValue = ref ? (p.size===2 ? ru16(ref,addr) : ru8(ref,addr)) : null;
+  const mirrorOk = value===m1v && value===m2v;
+  const isDriftOk = value===p.drift_soll;
+  const isStock   = value>=p.stock_range[0] && value<=p.stock_range[1];
+  const status    = isDriftOk?"ok" : isStock?"stock" : "bad";
+  return {valid:true,value,m1:m1v,m2:m2v,mirrorOk,isDriftOk,isStock,status,refValue};
+}
+
+function analyzeMap(buf, m, shift, ref) {
+  const addr = m.addr+shift;
+  if (addr<0 || addr+m.size>buf.length) return {valid:false};
+  if (m.check==="all_zero") {
+    const nz = Array.from(buf.slice(addr,addr+m.size)).filter(x=>x!==0).length;
+    return {valid:true, status:nz===0?"ok":"bad", detail:`${nz}/${m.size}B != 0`};
+  }
+  if (m.check==="ffff_word") {
+    const nb = Array.from({length:m.wc}).filter((_,i)=>ru16(buf,addr+i*2)!==0xFFFF).length;
+    return {valid:true, status:nb===0?"ok":"bad", detail:`${nb}/${m.wc}W != 0xFFFF`};
+  }
+  if (m.check==="timing") {
+    const vals = Array.from(buf.slice(addr,addr+m.size));
+    const avg  = vals.reduce((a,b)=>a+b,0)/vals.length;
+    const zeros = vals.filter(v=>v===0).length;
+    const refVals = ref ? Array.from(ref.slice(addr,addr+m.size)) : null;
+    const m1d = vals.filter((_,i)=>buf[addr+i]!==buf[addr+M1+i]).length;
+    const m2d = vals.filter((_,i)=>buf[addr+i]!==buf[addr+M2+i]).length;
+    return {
+      valid:true, status:zeros>200?"bad":"info",
+      detail:`Ø ${(avg*0.75).toFixed(1)} Grad`,
+      mirrorOk:m1d===0&&m2d===0, zeros, avg, vals, refVals,
+    };
+  }
+  return {valid:false};
+}
+
+function runAnalysis(buf, ref) {
+  const sw     = detectSW(buf);
+  const shift  = sw.addrShift||0;
+  const partNr = getPartNr(buf);
+  const mirror = mirrorCheck(buf);
+  const params = PARAMS.map(p=>({...p,result:analyzeParam(buf,p,shift,ref)}));
+  const maps   = MAPS.map(m=>({...m,result:analyzeMap(buf,m,shift,ref)}));
+  const diff   = ref ? computeDiff(ref,buf) : null;
+  const okC    = params.filter(p=>p.result.status==="ok").length;
+  const badC   = params.filter(p=>p.result.status==="bad").length;
+  const mapOk  = maps.filter(m=>m.result.status==="ok").length;
   const mapBad = maps.filter(m=>m.result.status==="bad").length;
-
-  const total = driftParams.length + maps.filter(m=>m.result.valid).length;
-  const okTotal = okCount + mapOk;
-  const score = Math.round((okTotal/total)*100);
-
-  return { sw, partNr, mirror, params, maps, score, okCount, badCount, mirrorBad, mapOk, mapBad };
+  const total  = params.filter(p=>p.result.valid).length + maps.filter(m=>m.result.valid).length;
+  const score  = Math.round(((okC+mapOk)/total)*100);
+  return {sw,partNr,mirror,params,maps,diff,score,okC,badC,mapOk,mapBad};
 }
 
-// ─── COMPONENTS ──────────────────────────────────────────────────────────────
-
-const STATUS_COLOR = {
-  ok:      "#00ff88",
-  bad:     "#ff3c3c",
-  stock:   "#f59e0b",
-  unknown: "#666",
-  info:    "#60a5fa",
-};
-const STATUS_LABEL = {
-  ok:"DRIFT OK", bad:"FEHLER", stock:"STOCK", unknown:"?", info:"INFO"
-};
-
-function Badge({ status, children }) {
-  return (
-    <span style={{
-      display:"inline-block", padding:"1px 7px", borderRadius:3,
-      fontSize:10, fontFamily:"'JetBrains Mono',monospace", letterSpacing:1,
-      background: STATUS_COLOR[status]+"22",
-      color: STATUS_COLOR[status],
-      border:`1px solid ${STATUS_COLOR[status]}44`,
-    }}>{children || STATUS_LABEL[status]}</span>
-  );
+function buildExportJSON(an, tuneName, refName) {
+  return JSON.stringify({
+    tool:"ME2.8 Drift Analyzer v2", generated:new Date().toISOString(),
+    files:{tune:tuneName,ref:refName||null},
+    sw:{label:an.sw.label,engine:an.sw.engine,gen:an.sw.gen,partNr:an.partNr},
+    score:an.score,
+    mirror:{d12:an.mirror.d12,d13:an.mirror.d13,ok:an.mirror.ok},
+    params:an.params.map(p=>({
+      id:p.id,cat:p.cat,label:p.label,value:p.result.valid?p.result.value:null,
+      refValue:p.result.valid?p.result.refValue:null,
+      drift_soll:p.drift_soll,status:p.result.valid?p.result.status:null,
+      mirrorOk:p.result.valid?p.result.mirrorOk:null,
+    })),
+    maps:an.maps.map(m=>({id:m.id,label:m.label,status:m.result.valid?m.result.status:null,detail:m.result.valid?m.result.detail:null})),
+    diff:an.diff?an.diff.map(b=>({
+      start:"0x"+b.start.toString(16).toUpperCase().padStart(5,"0"),
+      end:"0x"+b.end.toString(16).toUpperCase().padStart(5,"0"),
+      size:b.total,changed:b.changed,pct:b.pct,
+      region:b.region.name,risk:b.region.risk,
+    })):null,
+  }, null, 2);
 }
 
-function MirrorDot({ ok }) {
-  return (
-    <span title={ok?"Mirror ✓":"Mirror INKONSISTENT"} style={{
-      display:"inline-block", width:7, height:7, borderRadius:"50%",
-      background: ok ? "#00ff88" : "#ff3c3c",
-      marginLeft:5, verticalAlign:"middle",
-    }}/>
-  );
+function buildExportText(an, tuneName, refName) {
+  const L=["=".repeat(55),"  ME2.8 DRIFT ANALYZER - PRUEFPROTOKOLL","  KFZ Dietrich","=".repeat(55),
+    "Erstellt:   "+new Date().toLocaleString("de-DE"),
+    "Datei:      "+tuneName, refName?"Referenz:   "+refName:"",
+    "","SOFTWARE",
+    "  SW:       "+an.sw.label+" ("+an.sw.engine+" / "+an.sw.gen+")",
+    "  Teilenr.: "+(an.partNr||"-"),
+    "","SCORE: "+an.score+"%","",
+    "MIRROR","  P<>M1: "+an.mirror.d12+"B  P<>M2: "+an.mirror.d13+"B  "+( an.mirror.ok?"OK":"KORRUPT!"),
+    "","PARAMETER",
+    ...an.params.filter(p=>p.result.valid).map(p=>{
+      const r=p.result;
+      const v=r.value===0xFFFF?"0xFFFF":String(r.value);
+      const rf=r.refValue!==null?" [Ref:"+(r.refValue===0xFFFF?"0xFFFF":r.refValue)+"]":"";
+      const st=r.status==="ok"?"OK":r.status==="stock"?"STOCK":"FEHLER";
+      return "  ["+st+"] "+p.label.padEnd(12)+" "+v.padEnd(8)+p.unit+rf+(!r.mirrorOk?" [MIRROR!]":"");
+    }),
+    "","KENNFELDER",
+    ...an.maps.filter(m=>m.result.valid).map(m=>"  ["+(m.result.status==="ok"?"OK":"FEHLER")+"] "+m.label.padEnd(12)+" "+m.result.detail),
+    "",
+    ...(an.diff?[
+      "DIFF ("+an.diff.length+" Bloecke)",
+      ...an.diff.filter(b=>b.region.risk!=="mirror"&&b.region.risk!=="code").map(b=>
+        "  ["+b.region.risk.toUpperCase().padEnd(6)+"] 0x"+b.start.toString(16).toUpperCase().padStart(5,"0")+" "+b.total+"B  "+b.region.name
+      ),"",
+    ]:[]),
+    "=".repeat(55),
+  ];
+  return L.join("\n");
 }
 
-function CategoryBlock({ title, icon, color, children }) {
-  return (
-    <div style={{
-      border:`1px solid ${color}33`,
-      borderLeft:`3px solid ${color}`,
-      background:`${color}08`,
-      borderRadius:6, marginBottom:16, overflow:"hidden"
-    }}>
-      <div style={{
-        padding:"8px 14px", background:`${color}15`,
-        borderBottom:`1px solid ${color}22`,
-        display:"flex", alignItems:"center", gap:8
-      }}>
-        <span style={{fontSize:14}}>{icon}</span>
-        <span style={{color, fontFamily:"'JetBrains Mono',monospace", fontSize:11, letterSpacing:2, fontWeight:700}}>{title}</span>
-      </div>
-      <div style={{padding:"10px 14px"}}>{children}</div>
-    </div>
-  );
+function downloadFile(content, filename, type) {
+  const b=new Blob([content],{type}),u=URL.createObjectURL(b),a=document.createElement("a");
+  a.href=u;a.download=filename;a.click();URL.revokeObjectURL(u);
 }
 
-function ParamRow({ p }) {
-  const r = p.result;
-  if (!r.valid) return (
-    <div style={{display:"flex",alignItems:"center",padding:"4px 0",borderBottom:"1px solid #1a1a1a",opacity:0.4}}>
-      <span style={{width:130,fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:"#555"}}>{p.label}</span>
-      <span style={{color:"#333",fontSize:11}}>— außerhalb SW-Bereich</span>
-    </div>
-  );
+const SC={ok:"#00ff88",bad:"#ff3c3c",stock:"#f59e0b",unknown:"#444",info:"#60a5fa"};
 
-  const valueDisplay = r.value === 0xFFFF
-    ? <span style={{color:"#00ff88",fontSize:11,fontFamily:"monospace"}}>0xFFFF ∞</span>
-    : <span style={{color:"#e0e0e0",fontSize:12,fontFamily:"'JetBrains Mono',monospace"}}>{r.value} <span style={{color:"#555",fontSize:10}}>{p.unit}</span></span>;
-
-  const sollDisplay = p.drift_soll === 0xFFFF ? "0xFFFF" : `${p.drift_soll}`;
-
-  return (
-    <div style={{
-      display:"grid", gridTemplateColumns:"130px 90px 80px 1fr 60px",
-      alignItems:"center", padding:"5px 0",
-      borderBottom:"1px solid #141414",
-      opacity: r.status==="unknown" ? 0.5 : 1
-    }}>
-      <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:"#aaa"}}>{p.label}</span>
-      <span>{valueDisplay}</span>
-      <span style={{fontSize:10,color:"#444",fontFamily:"monospace"}}>Soll: {sollDisplay}</span>
-      <span style={{fontSize:10,color:"#555"}}>{p.desc}</span>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:4}}>
-        <Badge status={r.status}/>
-        <MirrorDot ok={r.mirrorOk}/>
-      </div>
-    </div>
-  );
+function Badge({status,children}) {
+  const c=SC[status]||"#444";
+  return <span style={{display:"inline-block",padding:"1px 6px",borderRadius:3,fontSize:9,fontFamily:"monospace",letterSpacing:1,background:c+"22",color:c,border:"1px solid "+c+"44"}}>{children||(status||"?").toUpperCase()}</span>;
+}
+function MDot({ok}) {
+  return <span title={ok?"Mirror OK":"Mirror INKONSISTENT!"} style={{display:"inline-block",width:6,height:6,borderRadius:"50%",background:ok?"#00ff88":"#ff3c3c",marginLeft:4,verticalAlign:"middle"}}/>;
 }
 
-function MapRow({ m }) {
-  const r = m.result;
-  if (!r.valid) return null;
-  const color = STATUS_COLOR[r.status] || "#666";
+function ScoreRing({score}) {
+  const r=34,circ=2*Math.PI*r,dash=(score/100)*circ;
+  const c=score>=80?"#00ff88":score>=50?"#f59e0b":"#ff3c3c";
   return (
-    <div style={{
-      display:"grid", gridTemplateColumns:"130px 1fr 80px",
-      alignItems:"center", padding:"5px 0", borderBottom:"1px solid #141414"
-    }}>
-      <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:"#aaa"}}>{m.label}</span>
-      <span style={{fontSize:11,color:"#555"}}>{m.desc} <span style={{color:"#333",fontSize:10}}>→ {r.detail}</span></span>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:4}}>
-        <Badge status={r.status}/>
-        {r.mirrorOk !== undefined && <MirrorDot ok={r.mirrorOk}/>}
-      </div>
-    </div>
-  );
-}
-
-function ScoreRing({ score }) {
-  const r = 36, circ = 2*Math.PI*r;
-  const dash = (score/100)*circ;
-  const color = score>=80?"#00ff88":score>=50?"#f59e0b":"#ff3c3c";
-  return (
-    <svg width={100} height={100} style={{transform:"rotate(-90deg)"}}>
-      <circle cx={50} cy={50} r={r} fill="none" stroke="#1a1a1a" strokeWidth={7}/>
-      <circle cx={50} cy={50} r={r} fill="none" stroke={color} strokeWidth={7}
-        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-        style={{transition:"stroke-dasharray 0.8s ease"}}/>
-      <text x={50} y={54} textAnchor="middle" fill={color}
-        style={{transform:"rotate(90deg) translateX(-100px) translateY(-50px)",fontSize:20,fontFamily:"monospace",fontWeight:700}}>
-        {score}
-      </text>
-      <text x={50} y={64} textAnchor="middle" fill="#555"
-        style={{transform:"rotate(90deg) translateX(-100px) translateY(-50px)",fontSize:8,fontFamily:"monospace"}}>
-        %
-      </text>
+    <svg width={86} height={86}>
+      <circle cx={43} cy={43} r={r} fill="none" stroke="#1a1a1a" strokeWidth={7}/>
+      <circle cx={43} cy={43} r={r} fill="none" stroke={c} strokeWidth={7}
+        strokeDasharray={dash+" "+circ} strokeLinecap="round"
+        strokeDashoffset={circ/4}/>
+      <text x={43} y={47} textAnchor="middle" fill={c} style={{fontSize:19,fontFamily:"monospace",fontWeight:700}}>{score}</text>
+      <text x={43} y={58} textAnchor="middle" fill="#444" style={{fontSize:8,fontFamily:"monospace"}}>%</text>
     </svg>
   );
 }
 
-// ─── MAIN APP ─────────────────────────────────────────────────────────────────
-export default function ME28Analyzer() {
-  const [analysis, setAnalysis] = useState(null);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState(null);
-  const [fileName, setFileName] = useState(null);
-  const [dragging, setDragging] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
-  const inputRef = useRef();
+function TimingMap({vals,refVals,label}) {
+  if(!vals||!vals.length) return null;
+  const lo=Math.min(...vals),hi=Math.max(...vals)||1;
+  const cellBg=(v)=>{
+    if(refVals) {
+      const i=vals.indexOf(v); const d=v-(refVals[i]||0);
+      if(d===0) return "#141414";
+      return d>0?"rgba(0,255,136,"+(Math.min(Math.abs(d)/20,1)*0.85)+")":"rgba(255,60,60,"+(Math.min(Math.abs(d)/20,1)*0.85)+")";
+    }
+    const t=(v-lo)/(hi-lo);
+    if(t<0.33) return "hsl("+(220-t*100)+",60%,"+(25+t*20)+"%)";
+    if(t<0.66) return "hsl("+(100-t*200)+",70%,40%)";
+    return "hsl("+(Math.max(0,30-t*30))+",85%,47%)";
+  };
+  return (
+    <div style={{marginBottom:24}}>
+      <div style={{fontSize:9,color:"#ff6b2b",letterSpacing:2,marginBottom:8}}>{label}</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(16,1fr)",gap:2,maxWidth:528}}>
+        {vals.map((v,i)=>{
+          const d=refVals?v-refVals[i]:null;
+          const bg=refVals?cellBg(v):cellBg(v);
+          return (
+            <div key={i}
+              title={"["+Math.floor(i/16)+","+i%16+"] "+(v*0.75).toFixed(1)+"Grad"+(d!==null?" Delta:"+(d>0?"+":"")+( d*0.75).toFixed(1)+"Grad":"")}
+              style={{background:refVals?(d===0?"#141414":d>0?"rgba(0,255,136,"+(Math.min(Math.abs(d)/20,1)*0.8)+")":"rgba(255,60,60,"+(Math.min(Math.abs(d)/20,1)*0.8)+")")":cellBg(v),
+                height:22,borderRadius:2,display:"flex",alignItems:"center",justifyContent:"center",
+                fontSize:7,color:"rgba(255,255,255,0.65)",border:"1px solid #111",cursor:"default"}}>
+              {(v*0.75).toFixed(0)}
+            </div>
+          );
+        })}
+      </div>
+      <div style={{display:"flex",gap:14,marginTop:5,fontSize:8,color:"#444"}}>
+        {refVals
+          ? <><span style={{color:"#00ff88"}}>gruen = mehr Vorzuendung</span><span style={{color:"#ff3c3c"}}>rot = weniger</span></>
+          : <><span style={{color:"hsl(220,60%,30%)"}}>dunkel = niedrig</span><span style={{color:"hsl(0,85%,47%)"}}>hell = hoch</span></>}
+      </div>
+    </div>
+  );
+}
 
-  const processFile = useCallback((file) => {
-    if (!file) return;
-    setLoading(true); setError(null); setAnalysis(null);
-    setFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const buf = new Uint8Array(e.target.result);
-        if (buf.length !== 524288) {
-          setError(`Ungültige Dateigröße: ${buf.length} Bytes (erwartet 524288 = 512KB)`);
-          setLoading(false); return;
-        }
-        const result = runAnalysis(buf);
-        setAnalysis(result);
-      } catch(ex) {
-        setError("Analysefehler: " + ex.message);
-      }
-      setLoading(false);
+function DropZone({label,onFile,file,color,icon}) {
+  const [drag,setDrag]=useState(false);
+  const inp=useRef();
+  return (
+    <div onClick={()=>inp.current.click()}
+      onDrop={e=>{e.preventDefault();setDrag(false);onFile(e.dataTransfer.files[0]);}}
+      onDragOver={e=>{e.preventDefault();setDrag(true);}} onDragLeave={()=>setDrag(false)}
+      style={{border:"2px dashed "+(drag?color:"#1e1e1e"),borderRadius:8,padding:"18px 14px",
+        textAlign:"center",cursor:"pointer",background:drag?color+"0a":"#0d0d0d",flex:1,minWidth:0,transition:"all 0.15s"}}>
+      <div style={{fontSize:20,marginBottom:5}}>{icon}</div>
+      <div style={{fontSize:9,color,letterSpacing:2,marginBottom:4}}>{label}</div>
+      {file?<div style={{fontSize:9,color:"#00ff88"}}>✓ {file.name}</div>
+            :<div style={{fontSize:9,color:"#333"}}>.bin / .FLS / 512KB</div>}
+      <input ref={inp} type="file" accept=".bin,.FLS,.fls" style={{display:"none"}} onChange={e=>onFile(e.target.files[0])}/>
+    </div>
+  );
+}
+
+function PRow({p}) {
+  const r=p.result;
+  if(!r.valid) return null;
+  const v=r.value===0xFFFF?"0xFFFF":String(r.value);
+  const rv=r.refValue!==null?(r.refValue===0xFFFF?"0xFFFF":String(r.refValue)):null;
+  const delta=(r.refValue!==null&&r.value!==null&&r.value!==undefined)?r.value-r.refValue:null;
+  const vc=r.status==="ok"?"#00ff88":r.status==="bad"?"#ff3c3c":"#f59e0b";
+  return (
+    <div style={{display:"grid",gridTemplateColumns:"110px 75px 65px 55px 1fr 68px",alignItems:"center",
+      padding:"4px 0",borderBottom:"1px solid #0e0e0e",fontSize:10}}>
+      <span style={{fontFamily:"monospace",color:"#888"}}>{p.label}</span>
+      <span style={{fontFamily:"monospace",color:vc}}>{v}<span style={{color:"#333",fontSize:8}}> {p.unit}</span></span>
+      {rv?<span style={{color:"#333",fontSize:9}}>Ref:{rv}</span>:<span/>}
+      {delta!==null&&delta!==0?<span style={{color:delta>0?"#00ff88":"#ff3c3c",fontSize:9}}>{delta>0?"+":""}{delta}</span>:<span/>}
+      <span style={{color:"#2a2a2a",fontSize:9}}>Soll:{p.drift_soll===0xFFFF?"0xFFFF":p.drift_soll}</span>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:3}}>
+        <Badge status={r.status}/><MDot ok={r.mirrorOk}/>
+      </div>
+    </div>
+  );
+}
+
+const CAT_DEFS = {
+  NMAX:{label:"NMAX HARD-LIMITER",color:"#ff6b2b"},
+  SOFT:{label:"SOFT-LIMITER",color:"#f59e0b"},
+  VMAX:{label:"GESCHW.-BEGRENZER",color:"#a78bfa"},
+  SAS:{label:"SCHUBABSCHALTUNG",color:"#34d399"},
+  ATF:{label:"WANDLERSCHUTZ",color:"#60a5fa"},
+  ASR:{label:"ASR TEMPERATUR",color:"#f472b6"},
+};
+const MAP_CAT_DEFS = {
+  EGR:{label:"ABGASRUECKFUEHRUNG",color:"#94a3b8"},
+  CAN_ASR:{label:"CAN-ASR DREHMOMENTTABELLEN",color:"#ff3c3c"},
+  IGN:{label:"ZUENDWINKEL-KENNFELDER",color:"#fbbf24"},
+};
+
+export default function App() {
+  const [tuneFile,setTuneFile]=useState(null);
+  const [refFile,setRefFile]=useState(null);
+  const [tuneBuf,setTuneBuf]=useState(null);
+  const [refBuf,setRefBuf]=useState(null);
+  const [analysis,setAnalysis]=useState(null);
+  const [loading,setLoading]=useState(false);
+  const [error,setError]=useState(null);
+  const [tab,setTab]=useState("overview");
+
+  const load=(file,isRef)=>{
+    if(!file)return;
+    const rd=new FileReader();
+    rd.onload=e=>{
+      const buf=new Uint8Array(e.target.result);
+      if(buf.length!==524288){setError(file.name+": "+buf.length+"B -- erwartet 524288");return;}
+      if(isRef){setRefFile(file);setRefBuf(buf);setAnalysis(null);}
+      else{setTuneFile(file);setTuneBuf(buf);setAnalysis(null);}
     };
-    reader.readAsArrayBuffer(file);
-  }, []);
-
-  const onDrop = useCallback((e) => {
-    e.preventDefault(); setDragging(false);
-    processFile(e.dataTransfer.files[0]);
-  }, [processFile]);
-
-  const onDragOver = (e) => { e.preventDefault(); setDragging(true); };
-  const onDragLeave = () => setDragging(false);
-
-  const CATS = {
-    "NMAX":    { title:"NMAX HARD-LIMITER", icon:"⚡", color:"#ff6b2b" },
-    "SOFT":    { title:"SOFT-LIMITER",       icon:"📊", color:"#f59e0b" },
-    "VMAX":    { title:"GESCHWINDIGKEITSBEGRENZER", icon:"🚫", color:"#a78bfa" },
-    "SAS":     { title:"SCHUBABSCHALTUNG",   icon:"💨", color:"#34d399" },
-    "ATF":     { title:"WANDLERSCHUTZ",      icon:"🔧", color:"#60a5fa" },
-    "ASR":     { title:"ASR TEMPERATUR",     icon:"🌡", color:"#f472b6" },
-    "EGR":     { title:"ABGASRÜCKFÜHRUNG",   icon:"♻️", color:"#94a3b8" },
-    "CAN_ASR": { title:"CAN ASR DREHMOMENTTABELLEN", icon:"📡", color:"#ff3c3c" },
-    "IGN":     { title:"ZÜNDWINKEL",         icon:"🔥", color:"#fbbf24" },
+    rd.readAsArrayBuffer(file);
   };
 
-  const catGroups = {};
-  if (analysis) {
-    for (const p of analysis.params) {
-      if (!catGroups[p.cat]) catGroups[p.cat] = { params:[], maps:[] };
-      catGroups[p.cat].params.push(p);
-    }
-    for (const m of analysis.maps) {
-      if (!catGroups[m.cat]) catGroups[m.cat] = { params:[], maps:[] };
-      catGroups[m.cat].maps.push(m);
-    }
-  }
+  const analyze=()=>{
+    if(!tuneBuf)return;
+    setLoading(true);setError(null);
+    setTimeout(()=>{
+      try{const r=runAnalysis(tuneBuf,refBuf||null);setAnalysis(r);setTab("overview");}
+      catch(ex){setError("Fehler: "+ex.message);}
+      setLoading(false);
+    },60);
+  };
 
-  const tabs = ["overview","params","maps","mirror"];
+  const reset=()=>{setTuneFile(null);setRefFile(null);setTuneBuf(null);setRefBuf(null);setAnalysis(null);setError(null);};
+
+  const TABS=analysis
+    ? ["overview","params","kennfelder","timing","diff","export"].filter(t=>t!=="diff"||analysis.diff)
+    : [];
 
   return (
-    <div style={{
-      minHeight:"100vh", background:"#0a0a0a", color:"#c8c8c8",
-      fontFamily:"'JetBrains Mono',monospace",
-      backgroundImage:"radial-gradient(ellipse at 20% 20%, #0f1f0f 0%, transparent 60%), radial-gradient(ellipse at 80% 80%, #0d0d1f 0%, transparent 60%)",
-    }}>
+    <div style={{minHeight:"100vh",background:"#080808",color:"#c0c0c0",fontFamily:"'JetBrains Mono',monospace",
+      backgroundImage:"radial-gradient(ellipse at 15% 15%,#0a1a0a 0%,transparent 55%),radial-gradient(ellipse at 85% 85%,#0a0a1a 0%,transparent 55%)"}}>
+
       {/* Header */}
-      <div style={{
-        borderBottom:"1px solid #1e1e1e",
-        background:"#080808ee",
-        padding:"0 24px",
-        display:"flex", alignItems:"center", justifyContent:"space-between",
-        position:"sticky", top:0, zIndex:10,
-        backdropFilter:"blur(10px)"
-      }}>
-        <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px 0"}}>
-          <div style={{width:28,height:28,background:"#ff6b2b22",border:"1px solid #ff6b2b55",borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>⚡</div>
+      <div style={{borderBottom:"1px solid #141414",background:"#040404ee",backdropFilter:"blur(8px)",
+        padding:"0 22px",position:"sticky",top:0,zIndex:20,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,padding:"11px 0"}}>
+          <div style={{width:24,height:24,background:"#ff6b2b18",border:"1px solid #ff6b2b44",borderRadius:4,
+            display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>⚡</div>
           <div>
-            <div style={{fontSize:12,fontWeight:700,letterSpacing:3,color:"#ff6b2b"}}>ME2.8 DRIFT ANALYZER</div>
-            <div style={{fontSize:9,color:"#333",letterSpacing:2}}>BOSCH ME2.8 — KFZ DIETRICH DIAGNOSTIC TOOL</div>
+            <div style={{fontSize:11,fontWeight:700,letterSpacing:3,color:"#ff6b2b"}}>ME2.8 DRIFT ANALYZER</div>
+            <div style={{fontSize:8,color:"#252525",letterSpacing:2}}>v2 · ZWEI-DATEI-VERGLEICH · KFZ DIETRICH</div>
           </div>
         </div>
-        {fileName && (
-          <div style={{fontSize:10,color:"#444",display:"flex",alignItems:"center",gap:8}}>
-            <span style={{color:"#1e1e1e"}}>█</span>
-            <span style={{color:"#555"}}>{fileName}</span>
-          </div>
-        )}
+        {analysis&&<button onClick={reset} style={{background:"transparent",border:"1px solid #1a1a1a",
+          color:"#383838",padding:"4px 12px",borderRadius:4,cursor:"pointer",fontSize:9,letterSpacing:1,fontFamily:"monospace"}}>
+          RESET
+        </button>}
       </div>
 
-      <div style={{maxWidth:1100,margin:"0 auto",padding:"24px 24px"}}>
+      <div style={{maxWidth:1100,margin:"0 auto",padding:"18px 22px"}}>
 
-        {/* Drop zone */}
-        {!analysis && !loading && (
-          <div
-            onClick={()=>inputRef.current.click()}
-            onDrop={onDrop} onDragOver={onDragOver} onDragLeave={onDragLeave}
-            style={{
-              border:`2px dashed ${dragging?"#ff6b2b":"#222"}`,
-              borderRadius:12, padding:"64px 32px", textAlign:"center",
-              cursor:"pointer", transition:"all 0.2s",
-              background: dragging ? "#ff6b2b0a" : "#0d0d0d",
-              marginBottom:24,
-            }}>
-            <div style={{fontSize:40,marginBottom:16}}>📂</div>
-            <div style={{fontSize:14,color:"#ff6b2b",marginBottom:8,letterSpacing:2}}>FLASH DATEI LADEN</div>
-            <div style={{fontSize:11,color:"#444"}}>Ziehen oder klicken · .bin / .FLS · 512KB (524288 Bytes)</div>
-            <input ref={inputRef} type="file" accept=".bin,.FLS,.fls" style={{display:"none"}}
-              onChange={e=>processFile(e.target.files[0])}/>
-          </div>
-        )}
-
-        {/* Loading */}
-        {loading && (
-          <div style={{textAlign:"center",padding:80}}>
-            <div style={{fontSize:24,marginBottom:16,animation:"pulse 1s infinite"}}>⚡</div>
-            <div style={{fontSize:11,color:"#ff6b2b",letterSpacing:3}}>ANALYSIERE…</div>
-          </div>
-        )}
-
-        {/* Error */}
-        {error && (
-          <div style={{background:"#1a0808",border:"1px solid #ff3c3c44",borderRadius:8,padding:20,marginBottom:24}}>
-            <div style={{color:"#ff3c3c",fontSize:12,marginBottom:4}}>⚠ FEHLER</div>
-            <div style={{fontSize:11,color:"#888"}}>{error}</div>
-            <button onClick={()=>{setError(null);setAnalysis(null);}} style={{marginTop:12,background:"#1e0808",border:"1px solid #ff3c3c44",color:"#ff3c3c",padding:"6px 14px",borderRadius:4,cursor:"pointer",fontSize:10,letterSpacing:1}}>ZURÜCKSETZEN</button>
-          </div>
-        )}
-
-        {/* Analysis result */}
-        {analysis && (
-          <>
-            {/* Summary bar */}
-            <div style={{
-              display:"grid", gridTemplateColumns:"auto 1fr auto",
-              gap:20, marginBottom:24,
-              background:"#0d0d0d", border:"1px solid #1e1e1e", borderRadius:10, padding:20,
-              alignItems:"center"
-            }}>
-              {/* Score */}
-              <div style={{textAlign:"center"}}>
-                <ScoreRing score={analysis.score}/>
-                <div style={{fontSize:9,color:"#444",letterSpacing:2,marginTop:4}}>DRIFT SCORE</div>
-              </div>
-
-              {/* SW Info */}
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-                <div>
-                  <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:6}}>SOFTWARE</div>
-                  <div style={{fontSize:14,color:"#ff6b2b",fontWeight:700}}>{analysis.sw.label}</div>
-                  <div style={{fontSize:10,color:"#555",marginTop:2}}>{analysis.sw.engine} · {analysis.sw.gen}</div>
-                  <div style={{fontSize:9,color:"#333",marginTop:4,fontFamily:"monospace"}}>{analysis.sw.raw.slice(0,30)}</div>
-                </div>
-                <div>
-                  <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:6}}>TEILENUMMER</div>
-                  <div style={{fontSize:13,color:"#a0a0a0",fontFamily:"monospace"}}>{analysis.partNr || "—"}</div>
-                  <div style={{fontSize:9,color:"#444",marginTop:8,letterSpacing:2}}>STATISTIK</div>
-                  <div style={{fontSize:10,color:"#555",marginTop:3}}>
-                    <span style={{color:"#00ff88"}}>{analysis.okCount}</span> OK ·{" "}
-                    <span style={{color:"#f59e0b"}}>{analysis.params.filter(p=>p.result.status==="stock").length}</span> Stock ·{" "}
-                    <span style={{color:"#ff3c3c"}}>{analysis.badCount}</span> Fehler ·{" "}
-                    <span style={{color:"#ff3c3c"}}>{analysis.mirrorBad}</span> Mirror-Fehler
-                  </div>
-                </div>
-                <div>
-                  <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:6}}>KENNFELDER</div>
-                  <div style={{fontSize:10,color:"#555"}}>
-                    <span style={{color:"#00ff88"}}>{analysis.mapOk}</span>/{analysis.maps.length} OK
-                  </div>
-                </div>
-                <div>
-                  <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:6}}>MIRROR INTEGRITÄT</div>
-                  <div style={{display:"flex",alignItems:"center",gap:6}}>
-                    <MirrorDot ok={analysis.mirror.ok}/>
-                    <span style={{fontSize:10,color: analysis.mirror.ok?"#00ff88":"#ff3c3c"}}>
-                      {analysis.mirror.ok?"OK":`P↔M1: ${analysis.mirror.diff12} | P↔M2: ${analysis.mirror.diff13}`}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Reset */}
-              <button onClick={()=>{setAnalysis(null);setFileName(null);setError(null);}}
-                style={{background:"transparent",border:"1px solid #222",color:"#444",padding:"8px 14px",borderRadius:5,cursor:"pointer",fontSize:10,letterSpacing:1,transition:"all 0.2s",whiteSpace:"nowrap"}}
-                onMouseEnter={e=>e.target.style.borderColor="#ff6b2b"}
-                onMouseLeave={e=>e.target.style.borderColor="#222"}>
-                ↑ NEU LADEN
-              </button>
+        {/* File load area */}
+        {!analysis&&(
+          <div style={{marginBottom:18}}>
+            <div style={{display:"flex",gap:10,marginBottom:10}}>
+              <DropZone label="TUNE / PRUEFLING" onFile={f=>load(f,false)} file={tuneFile} color="#ff6b2b" icon="⚙"/>
+              <DropZone label="REFERENZ (optional)" onFile={f=>load(f,true)} file={refFile} color="#60a5fa" icon="📋"/>
             </div>
-
-            {/* Quick issues */}
-            {(analysis.badCount > 0 || analysis.mirrorBad > 0 || !analysis.mirror.ok) && (
-              <div style={{background:"#130808",border:"1px solid #ff3c3c33",borderRadius:8,padding:"12px 16px",marginBottom:20}}>
-                <div style={{fontSize:9,color:"#ff3c3c",letterSpacing:2,marginBottom:8}}>⚠ KRITISCHE PROBLEME</div>
-                {[...analysis.params.filter(p=>p.result.status==="bad"), ...analysis.params.filter(p=>!p.result.mirrorOk&&p.result.valid)].slice(0,8).map(p=>(
-                  <div key={p.id} style={{fontSize:10,color:"#ff6b2b",marginBottom:3}}>
-                    · {p.label}: {!p.result.isDriftOk ? `Ist ${p.result.value} · Soll ${p.drift_soll}` : ""} {!p.result.mirrorOk?"[MIRROR INKONSISTENT]":""}
-                  </div>
-                ))}
-                {[...analysis.maps.filter(m=>m.result.status==="bad")].map(m=>(
-                  <div key={m.id} style={{fontSize:10,color:"#ff6b2b",marginBottom:3}}>
-                    · {m.label}: {m.result.detail}
-                  </div>
-                ))}
-                {!analysis.mirror.ok && (
-                  <div style={{fontSize:10,color:"#ff3c3c",marginTop:4}}>
-                    · Mirror-Bereich: P↔M1={analysis.mirror.diff12} | P↔M2={analysis.mirror.diff13} Bytes verschieden — mögl. korruptes Flash!
-                  </div>
-                )}
-              </div>
+            {tuneBuf&&(
+              <button onClick={analyze} style={{width:"100%",background:"#ff6b2b",border:"none",color:"#000",
+                padding:"10px",borderRadius:6,cursor:"pointer",fontSize:11,fontFamily:"monospace",letterSpacing:3,fontWeight:700}}>
+                ANALYSIEREN{refBuf?" (mit Referenz-Vergleich)":""}
+              </button>
             )}
+          </div>
+        )}
 
-            {/* Tabs */}
-            <div style={{display:"flex",gap:2,marginBottom:16,borderBottom:"1px solid #1a1a1a",paddingBottom:0}}>
-              {tabs.map(t=>(
-                <button key={t} onClick={()=>setActiveTab(t)}
-                  style={{
-                    background:"transparent", border:"none", padding:"8px 18px",
-                    cursor:"pointer", fontSize:10, letterSpacing:2,
-                    color: activeTab===t?"#ff6b2b":"#444",
-                    borderBottom: activeTab===t?"2px solid #ff6b2b":"2px solid transparent",
-                    transition:"all 0.15s",
-                  }}>
-                  {t.toUpperCase()}
-                </button>
+        {loading&&<div style={{textAlign:"center",padding:56}}>
+          <div style={{fontSize:22,animation:"spin 0.8s linear infinite",marginBottom:10}}>⚙</div>
+          <div style={{fontSize:10,color:"#ff6b2b",letterSpacing:3}}>ANALYSIERE...</div>
+        </div>}
+
+        {error&&<div style={{background:"#110606",border:"1px solid #ff3c3c33",borderRadius:7,padding:"12px 16px",marginBottom:14}}>
+          <div style={{color:"#ff3c3c",fontSize:10,marginBottom:3}}>FEHLER</div>
+          <div style={{fontSize:9,color:"#666"}}>{error}</div>
+        </div>}
+
+        {analysis&&(<>
+          {/* Summary */}
+          <div style={{display:"grid",gridTemplateColumns:"76px 1fr",gap:14,background:"#0b0b0b",
+            border:"1px solid #181818",borderRadius:8,padding:14,marginBottom:14,alignItems:"center"}}>
+            <div style={{textAlign:"center"}}><ScoreRing score={analysis.score}/>
+              <div style={{fontSize:7,color:"#2a2a2a",letterSpacing:2}}>SCORE</div></div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+              <div>
+                <div style={{fontSize:8,color:"#2a2a2a",letterSpacing:2,marginBottom:4}}>SOFTWARE</div>
+                <div style={{fontSize:13,color:"#ff6b2b",fontWeight:700}}>{analysis.sw.label}</div>
+                <div style={{fontSize:9,color:"#3a3a3a"}}>{analysis.sw.engine} / {analysis.sw.gen}</div>
+              </div>
+              <div>
+                <div style={{fontSize:8,color:"#2a2a2a",letterSpacing:2,marginBottom:4}}>TEILENUMMER</div>
+                <div style={{fontSize:10,color:"#666",fontFamily:"monospace"}}>{analysis.partNr||"---"}</div>
+              </div>
+              <div>
+                <div style={{fontSize:8,color:"#2a2a2a",letterSpacing:2,marginBottom:4}}>PARAMETER</div>
+                <div style={{fontSize:10,color:"#555"}}>
+                  <span style={{color:"#00ff88"}}>{analysis.okC} OK</span>
+                  {" "}<span style={{color:"#f59e0b"}}>{analysis.params.filter(p=>p.result.status==="stock").length} St</span>
+                  {" "}<span style={{color:"#ff3c3c"}}>{analysis.badC} Err</span>
+                </div>
+              </div>
+              <div>
+                <div style={{fontSize:8,color:"#2a2a2a",letterSpacing:2,marginBottom:4}}>MIRROR</div>
+                <div style={{fontSize:9,color:analysis.mirror.ok?"#00ff88":"#ff3c3c"}}>
+                  {analysis.mirror.ok?"OK":"FEHLER"}
+                </div>
+                {!analysis.mirror.ok&&<div style={{fontSize:8,color:"#ff3c3c"}}>M1:{analysis.mirror.d12}B M2:{analysis.mirror.d13}B</div>}
+              </div>
+            </div>
+          </div>
+
+          {/* Alerts */}
+          {(analysis.badC>0||!analysis.mirror.ok||analysis.mapBad>0)&&(
+            <div style={{background:"#0e0606",border:"1px solid #ff3c3c20",borderRadius:7,
+              padding:"9px 13px",marginBottom:12}}>
+              <div style={{fontSize:8,color:"#ff3c3c",letterSpacing:2,marginBottom:5}}>KRITISCHE PROBLEME</div>
+              {analysis.params.filter(p=>p.result.status==="bad").map(p=>(
+                <div key={p.id} style={{fontSize:9,color:"#ff6b2b",marginBottom:2}}>
+                  {p.label}: ist {p.result.value} / soll {p.drift_soll===0xFFFF?"0xFFFF":p.drift_soll}
+                  {!p.result.mirrorOk?" [MIRROR!]":""}
+                </div>
+              ))}
+              {analysis.maps.filter(m=>m.result.status==="bad").map(m=>(
+                <div key={m.id} style={{fontSize:9,color:"#ff6b2b",marginBottom:2}}>{m.label}: {m.result.detail}</div>
+              ))}
+              {!analysis.mirror.ok&&<div style={{fontSize:9,color:"#ff3c3c",marginTop:2}}>Mirror: {analysis.mirror.d12}B (M1) / {analysis.mirror.d13}B (M2)</div>}
+            </div>
+          )}
+
+          {/* Tabs */}
+          <div style={{display:"flex",borderBottom:"1px solid #141414",marginBottom:12}}>
+            {TABS.map(t=>(
+              <button key={t} onClick={()=>setTab(t)} style={{background:"transparent",border:"none",
+                padding:"6px 14px",cursor:"pointer",fontSize:9,letterSpacing:2,fontFamily:"monospace",
+                color:tab===t?"#ff6b2b":"#2e2e2e",
+                borderBottom:tab===t?"2px solid #ff6b2b":"2px solid transparent",transition:"all 0.1s"}}>
+                {t==="diff"?"DIFF ("+analysis.diff.length+")":t.toUpperCase()}
+              </button>
+            ))}
+          </div>
+
+          {/* OVERVIEW */}
+          {tab==="overview"&&(
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
+              {Object.entries(CAT_DEFS).map(([cat,{label,color}])=>{
+                const ps=analysis.params.filter(p=>p.cat===cat&&p.result.valid);
+                if(!ps.length)return null;
+                const ok=ps.filter(p=>p.result.status==="ok").length;
+                const bad=ps.filter(p=>p.result.status==="bad").length;
+                const st=bad>0?"bad":ok===ps.length?"ok":"stock";
+                return(
+                  <div key={cat} style={{border:"1px solid "+SC[st]+"22",borderLeft:"3px solid "+SC[st],
+                    borderRadius:6,padding:"9px 11px",background:"#0b0b0b"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                      <span style={{fontSize:8,letterSpacing:2,color}}>{label}</span>
+                      <Badge status={st}/>
+                    </div>
+                    <div style={{fontSize:9,color:"#3a3a3a"}}>
+                      <span style={{color:"#00ff88"}}>{ok}</span>/{ps.length} OK
+                      {bad>0&&<span style={{color:"#ff3c3c"}}> / {bad} Fehler</span>}
+                    </div>
+                  </div>
+                );
+              })}
+              {Object.entries(MAP_CAT_DEFS).map(([cat,{label,color}])=>{
+                const ms=analysis.maps.filter(m=>m.cat===cat&&m.result.valid);
+                if(!ms.length)return null;
+                const ok=ms.filter(m=>m.result.status==="ok").length;
+                const bad=ms.filter(m=>m.result.status==="bad").length;
+                const st=bad>0?"bad":ok===ms.length?"ok":"stock";
+                return(
+                  <div key={cat} style={{border:"1px solid "+SC[st]+"22",borderLeft:"3px solid "+SC[st],
+                    borderRadius:6,padding:"9px 11px",background:"#0b0b0b"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                      <span style={{fontSize:8,letterSpacing:2,color}}>{label}</span>
+                      <Badge status={st}/>
+                    </div>
+                    <div style={{fontSize:9,color:"#3a3a3a"}}>
+                      {ms.map(m=><span key={m.id} style={{marginRight:8,color:m.result.status==="ok"?"#00ff88":"#ff3c3c"}}>
+                        {m.label}: {m.result.detail}
+                      </span>)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* PARAMS */}
+          {tab==="params"&&Object.entries(CAT_DEFS).map(([cat,{label,color}])=>{
+            const ps=analysis.params.filter(p=>p.cat===cat&&p.result.valid);
+            if(!ps.length)return null;
+            return(
+              <div key={cat} style={{border:"1px solid "+color+"22",borderLeft:"3px solid "+color,borderRadius:6,marginBottom:11}}>
+                <div style={{padding:"6px 11px",background:color+"10",fontSize:8,color,letterSpacing:2,fontWeight:700}}>{label}</div>
+                <div style={{padding:"6px 11px"}}>{ps.map(p=><PRow key={p.id} p={p}/>)}</div>
+              </div>
+            );
+          })}
+
+          {/* KENNFELDER */}
+          {tab==="kennfelder"&&Object.entries(MAP_CAT_DEFS).map(([cat,{label,color}])=>{
+            const ms=analysis.maps.filter(m=>m.cat===cat&&m.result.valid);
+            if(!ms.length)return null;
+            return(
+              <div key={cat} style={{border:"1px solid "+color+"22",borderLeft:"3px solid "+color,borderRadius:6,marginBottom:11}}>
+                <div style={{padding:"6px 11px",background:color+"10",fontSize:8,color,letterSpacing:2,fontWeight:700}}>{label}</div>
+                <div style={{padding:"6px 11px"}}>
+                  {ms.map(m=>(
+                    <div key={m.id} style={{display:"grid",gridTemplateColumns:"110px 1fr 80px",alignItems:"center",
+                      padding:"4px 0",borderBottom:"1px solid #0e0e0e",fontSize:10}}>
+                      <span style={{fontFamily:"monospace",color:"#777"}}>{m.label}</span>
+                      <span style={{color:"#2e2e2e",fontSize:9}}>{m.desc} / {m.result.detail}</span>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:3}}>
+                        <Badge status={m.result.status}/>
+                        {m.result.mirrorOk!==undefined&&<MDot ok={m.result.mirrorOk}/>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* TIMING */}
+          {tab==="timing"&&(
+            <div>
+              <div style={{fontSize:9,color:"#333",marginBottom:14,lineHeight:1.8}}>
+                {analysis.diff?"Farbe = Delta zur Referenz: gruen = mehr Vorzuendung, rot = weniger. Tooltip = absoluter Wert."
+                  :"Absoluter Zuendwinkelwert. Dunkel = weniger Vorzuendung. 1 raw = 0.75 Grad."}
+              </div>
+              {analysis.maps.filter(m=>m.cat==="IGN"&&m.result.valid&&m.result.vals).map(m=>(
+                <TimingMap key={m.id} label={m.label+" -- "+m.result.detail} vals={m.result.vals} refVals={m.result.refVals}/>
               ))}
             </div>
+          )}
 
-            {/* OVERVIEW */}
-            {activeTab==="overview" && (
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-                {Object.entries(CATS).filter(([cat])=>catGroups[cat]).map(([cat,info])=>{
-                  const group = catGroups[cat];
-                  const allOk = [...(group?.params||[]), ...(group?.maps||[])].every(
-                    p=>p.result[p.result.status?"status":""]!=="bad"
-                  );
-                  const hasMap = group?.maps?.length > 0;
-                  const hasParam = group?.params?.length > 0;
-                  const badItems = [
-                    ...(group?.params||[]).filter(p=>p.result.status==="bad"),
-                    ...(group?.maps||[]).filter(m=>m.result.status==="bad"),
-                  ];
-                  const stockItems = (group?.params||[]).filter(p=>p.result.status==="stock");
-                  const okItems = [
-                    ...(group?.params||[]).filter(p=>p.result.status==="ok"),
-                    ...(group?.maps||[]).filter(m=>m.result.status==="ok"),
-                  ];
-                  const catStatus = badItems.length>0?"bad":stockItems.length>0?"stock":"ok";
-                  return (
-                    <div key={cat} style={{
-                      border:`1px solid ${STATUS_COLOR[catStatus]}33`,
-                      borderLeft:`3px solid ${STATUS_COLOR[catStatus]}`,
-                      borderRadius:7, padding:"12px 16px", background:"#0d0d0d",
-                    }}>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                        <div style={{display:"flex",alignItems:"center",gap:6}}>
-                          <span>{info.icon}</span>
-                          <span style={{fontSize:9,letterSpacing:2,color:info.color,fontWeight:700}}>{info.title}</span>
-                        </div>
-                        <Badge status={catStatus}/>
-                      </div>
-                      <div style={{fontSize:10,color:"#555"}}>
-                        {okItems.length>0&&<span style={{color:"#00ff88"}}>✓ {okItems.length} OK  </span>}
-                        {stockItems.length>0&&<span style={{color:"#f59e0b"}}>◆ {stockItems.length} Stock  </span>}
-                        {badItems.length>0&&<span style={{color:"#ff3c3c"}}>✗ {badItems.map(p=>p.label).join(", ")}</span>}
-                      </div>
+          {/* DIFF */}
+          {tab==="diff"&&analysis.diff&&(
+            <div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8,marginBottom:14}}>
+                {Object.entries(RISK_LABEL).map(([risk,lbl])=>{
+                  const cnt=analysis.diff.filter(b=>b.region.risk===risk).length;
+                  if(!cnt)return null;
+                  const c=RISK_COLOR[risk];
+                  return(
+                    <div key={risk} style={{background:c+"0e",border:"1px solid "+c+"2a",borderRadius:5,padding:"8px 10px",textAlign:"center"}}>
+                      <div style={{fontSize:20,color:c,fontWeight:700}}>{cnt}</div>
+                      <div style={{fontSize:8,color:c,letterSpacing:1,marginTop:2}}>{lbl}</div>
                     </div>
                   );
                 })}
               </div>
-            )}
+              <div style={{fontSize:8,color:"#222",letterSpacing:2,marginBottom:7,display:"grid",
+                gridTemplateColumns:"12px 120px 80px 50px 1fr",gap:8}}>
+                <span/><span>ADRESSE</span><span>GESAMT/DIFF</span><span>TYP</span><span>REGION</span>
+              </div>
+              {analysis.diff.filter(b=>b.region.risk!=="mirror"&&b.region.risk!=="code").map((b,i)=>{
+                const c=RISK_COLOR[b.region.risk]||"#555";
+                return(
+                  <div key={i} style={{display:"grid",gridTemplateColumns:"12px 120px 80px 50px 1fr",
+                    alignItems:"center",padding:"4px 0",borderBottom:"1px solid #0e0e0e",fontSize:9,gap:8}}>
+                    <div style={{width:3,height:12,background:c,borderRadius:2}}/>
+                    <span style={{fontFamily:"monospace",color:"#555",fontSize:8}}>
+                      0x{b.start.toString(16).toUpperCase().padStart(5,"0")}-0x{b.end.toString(16).toUpperCase().padStart(5,"0")}
+                    </span>
+                    <span style={{color:"#444",fontSize:8}}>{b.total}B/{b.changed}B</span>
+                    <span style={{fontSize:7,padding:"1px 4px",borderRadius:3,letterSpacing:1,
+                      background:c+"22",color:c,border:"1px solid "+c+"44",whiteSpace:"nowrap"}}>
+                      {RISK_LABEL[b.region.risk]||"?"}
+                    </span>
+                    <span style={{color:"#777"}}>{b.region.name}</span>
+                  </div>
+                );
+              })}
+              {analysis.diff.filter(b=>b.region.risk==="mirror"||b.region.risk==="code").length>0&&(
+                <div style={{marginTop:10,fontSize:8,color:"#222"}}>
+                  + {analysis.diff.filter(b=>b.region.risk==="mirror"||b.region.risk==="code").length} Bloecke in Code/Mirror (ausgeblendet)
+                </div>
+              )}
+            </div>
+          )}
 
-            {/* PARAMS */}
-            {activeTab==="params" && (
-              <div>
-                {Object.entries(CATS).filter(([cat])=>catGroups[cat]?.params?.length).map(([cat,info])=>(
-                  <CategoryBlock key={cat} title={info.title} icon={info.icon} color={info.color}>
-                    {catGroups[cat].params.map(p=><ParamRow key={p.id} p={p}/>)}
-                  </CategoryBlock>
+          {/* EXPORT */}
+          {tab==="export"&&(
+            <div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+                {[
+                  {t:"JSON Export",i:"{}",d:"Maschinenlesbar / alle Werte / fuer Weiterverarbeitung",
+                    fn:()=>downloadFile(buildExportJSON(analysis,tuneFile?.name,refFile?.name),"ME28_"+tuneFile?.name?.replace(/\.[^.]+$/,"")+".json","application/json")},
+                  {t:"Text Protokoll",i:"=",d:"Druckbares Pruefprotokoll / plain text",
+                    fn:()=>downloadFile(buildExportText(analysis,tuneFile?.name,refFile?.name),"ME28_Protokoll_"+tuneFile?.name?.replace(/\.[^.]+$/,"")+".txt","text/plain")},
+                ].map(({t,i,d,fn})=>(
+                  <div key={t} style={{background:"#0b0b0b",border:"1px solid #181818",borderRadius:8,padding:18,textAlign:"center"}}>
+                    <div style={{fontSize:26,marginBottom:8,color:"#ff6b2b"}}>{i}</div>
+                    <div style={{fontSize:11,color:"#777",marginBottom:5}}>{t}</div>
+                    <div style={{fontSize:8,color:"#2a2a2a",marginBottom:14}}>{d}</div>
+                    <button onClick={fn} style={{background:"#ff6b2b",border:"none",color:"#000",
+                      padding:"7px 18px",borderRadius:4,cursor:"pointer",fontSize:9,
+                      fontFamily:"monospace",letterSpacing:2,fontWeight:700}}>
+                      HERUNTERLADEN
+                    </button>
+                  </div>
                 ))}
               </div>
-            )}
-
-            {/* MAPS */}
-            {activeTab==="maps" && (
-              <div>
-                {Object.entries(CATS).filter(([cat])=>catGroups[cat]?.maps?.length).map(([cat,info])=>(
-                  <CategoryBlock key={cat} title={info.title} icon={info.icon} color={info.color}>
-                    {catGroups[cat].maps.map(m=><MapRow key={m.id} m={m}/>)}
-                  </CategoryBlock>
-                ))}
+              <div style={{background:"#0b0b0b",border:"1px solid #181818",borderRadius:8,padding:12}}>
+                <div style={{fontSize:7,color:"#222",letterSpacing:2,marginBottom:6}}>VORSCHAU</div>
+                <pre style={{fontSize:8,color:"#3a3a3a",lineHeight:1.6,overflow:"auto",maxHeight:250,
+                  whiteSpace:"pre",fontFamily:"monospace",margin:0}}>
+                  {buildExportText(analysis,tuneFile?.name,refFile?.name).split("\n").slice(0,25).join("\n")}
+                </pre>
               </div>
-            )}
-
-            {/* MIRROR */}
-            {activeTab==="mirror" && (
-              <div>
-                <CategoryBlock title="MIRROR INTEGRITÄT" icon="🔁" color={analysis.mirror.ok?"#00ff88":"#ff3c3c"}>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16,padding:"8px 0"}}>
-                    {[
-                      {label:"Primary → Mirror 1", val:analysis.mirror.diff12},
-                      {label:"Primary → Mirror 2", val:analysis.mirror.diff13},
-                      {label:"Gesamt-Urteil",       val:analysis.mirror.ok?"OK":"KORRUPT"},
-                    ].map(({label,val})=>(
-                      <div key={label} style={{background:"#111",borderRadius:6,padding:14,textAlign:"center"}}>
-                        <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:8}}>{label}</div>
-                        <div style={{fontSize:20,fontWeight:700,color: typeof val==="number"?(val<100?"#00ff88":"#ff3c3c"):(val==="OK"?"#00ff88":"#ff3c3c")}}>
-                          {typeof val==="number"?`${val} B`:val}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{marginTop:12}}>
-                    <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:8}}>PARAMETER MIRROR-STATUS</div>
-                    {analysis.params.filter(p=>p.result.valid&&!p.result.mirrorOk).length===0
-                      ? <div style={{fontSize:10,color:"#00ff88"}}>✓ Alle Parameter Mirror-konsistent</div>
-                      : analysis.params.filter(p=>p.result.valid&&!p.result.mirrorOk).map(p=>(
-                        <div key={p.id} style={{fontSize:10,color:"#ff6b2b",marginBottom:4}}>
-                          ✗ {p.label}: P={p.result.value} M1={p.result.m1} M2={p.result.m2}
-                        </div>
-                      ))
-                    }
-                  </div>
-                </CategoryBlock>
-              </div>
-            )}
-          </>
-        )}
+            </div>
+          )}
+        </>)}
       </div>
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
-        * { box-sizing: border-box; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-        ::-webkit-scrollbar { width:4px; } 
-        ::-webkit-scrollbar-track { background:#0a0a0a; }
-        ::-webkit-scrollbar-thumb { background:#1e1e1e; border-radius:2px; }
+        *{box-sizing:border-box}
+        @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+        ::-webkit-scrollbar{width:3px;height:3px}
+        ::-webkit-scrollbar-track{background:#080808}
+        ::-webkit-scrollbar-thumb{background:#1e1e1e;border-radius:2px}
       `}</style>
     </div>
   );
