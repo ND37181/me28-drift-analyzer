@@ -173,7 +173,7 @@ function analyzeMap(buf, m, shift, ref) {
     const m1d = vals.filter((_,i)=>buf[addr+i]!==buf[addr+M1+i]).length;
     const m2d = vals.filter((_,i)=>buf[addr+i]!==buf[addr+M2+i]).length;
     return {
-      valid:true, status:zeros>200?"bad":"info",
+      valid:true, status:zeros>200?"bad":avg>15?"ok":"info",
       detail:`Ø ${(avg*0.75).toFixed(1)} Grad`,
       mirrorOk:m1d===0&&m2d===0, zeros, avg, vals, refVals,
     };
