@@ -288,16 +288,18 @@ function TimingMap({vals,refVals,label}) {
       <div style={{display:"grid",gridTemplateColumns:"repeat(16,1fr)",gap:2,maxWidth:528}}>
         {vals.map((v,i)=>{
           const d=refVals?v-refVals[i]:null;
-          const bg=refVals?cellBg(v):cellBg(v);
+          const alpha=d!==null?Math.min(Math.abs(d)/20,1)*0.8:0;
+          const bg=d===null?cellBg(v):d===0?"#141414":d>0?"rgba(0,200,100,"+alpha+")":"rgba(220,50,50,"+alpha+")";
+          const ti="[r"+Math.floor(i/16)+" c"+(i%16)+"] "+(v*0.75).toFixed(1)+"G"+(d!==null?" D"+(d>=0?"+":"")+( d*0.75).toFixed(1):"");
           return (
-            <div key={i}
-              title={"[r"+Math.floor(i/16)+" c"+i%16+"] "+(v*0.75).toFixed(1)+"Grad"+(d!==null?" D:"+(d>=0?"+":"")+( d*0.75).toFixed(1):"")+""}
-              style={{background:refVals?(d===0?"#141414":d>0?"rgba(0,255,136,"+(Math.min(Math.abs(d)/20,1)*0.8)+")":"rgba(255,60,60,"+(Math.min(Math.abs(d)/20,1)*0.8)+")")":cellBg(v),
+            <div key={i} title={ti}
+              style={{background:bg,
                 height:22,borderRadius:2,display:"flex",alignItems:"center",justifyContent:"center",
                 fontSize:7,color:"rgba(255,255,255,0.65)",border:"1px solid #111",cursor:"default"}}>
               {(v*0.75).toFixed(0)}
             </div>
           );
+        })}
         })}
       </div>
       <div style={{display:"flex",gap:14,marginTop:5,fontSize:8,color:"#444"}}>
