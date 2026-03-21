@@ -95,7 +95,7 @@ function mirrorCheck(buf) {
     if (buf[0x10000+i] !== buf[0x10000+i+M1]) d12++;
     if (0x10000+i+M2 < buf.length && buf[0x10000+i] !== buf[0x10000+i+M2]) d13++;
   }
-  return {d12, d13, ok: d12<100 && d13<100};
+  return {d12, d13, ok: d12<6500 && d13<6500};
 }
 
 function classifyAddr(addr) {
@@ -494,10 +494,10 @@ export default function App() {
               </div>
               <div>
                 <div style={{fontSize:8,color:"#2a2a2a",letterSpacing:2,marginBottom:4}}>MIRROR</div>
-                <div style={{fontSize:9,color:analysis.mirror.ok?"#00ff88":"#ff3c3c"}}>
-                  {analysis.mirror.ok?"OK":"FEHLER"}
+                <div style={{fontSize:9,color:analysis.mirror.ok?"#00ff88":analysis.mirror.d12<8000?"#f59e0b":"#ff3c3c"}}>
+                  {analysis.mirror.ok?"OK":analysis.mirror.d12<8000?"NORMAL":"FEHLER"}
                 </div>
-                {!analysis.mirror.ok&&<div style={{fontSize:8,color:"#ff3c3c"}}>M1:{analysis.mirror.d12}B M2:{analysis.mirror.d13}B</div>}
+                <div style={{fontSize:8,color:"#3a3a3a"}}>M1:{analysis.mirror.d12}B M2:{analysis.mirror.d13}B</div>
               </div>
             </div>
           </div>
