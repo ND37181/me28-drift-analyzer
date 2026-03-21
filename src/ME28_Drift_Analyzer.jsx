@@ -291,7 +291,7 @@ function TimingMap({vals,refVals,label}) {
           const bg=refVals?cellBg(v):cellBg(v);
           return (
             <div key={i}
-              title={"["+Math.floor(i/16)+","+i%16+"] "+(v*0.75).toFixed(1)+"Grad"+(d!==null?" Delta:"+(d>0?"+":"")+( d*0.75).toFixed(1)+"Grad":"")}
+              title={"[r"+Math.floor(i/16)+" c"+i%16+"] "+(v*0.75).toFixed(1)+"Grad"+(d!==null?" D:"+(d>=0?"+":"")+( d*0.75).toFixed(1):"")+""}
               style={{background:refVals?(d===0?"#141414":d>0?"rgba(0,255,136,"+(Math.min(Math.abs(d)/20,1)*0.8)+")":"rgba(255,60,60,"+(Math.min(Math.abs(d)/20,1)*0.8)+")")":cellBg(v),
                 height:22,borderRadius:2,display:"flex",alignItems:"center",justifyContent:"center",
                 fontSize:7,color:"rgba(255,255,255,0.65)",border:"1px solid #111",cursor:"default"}}>
