@@ -431,7 +431,7 @@ export default function App() {
             display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>⚡</div>
           <div>
             <div style={{fontSize:11,fontWeight:700,letterSpacing:3,color:"#ff6b2b"}}>ME2.8 DRIFT ANALYZER</div>
-            <div style={{fontSize:8,color:"#505050",letterSpacing:2}}>v2 · ZWEI-DATEI-VERGLEICH · KFZ DIETRICH</div>
+            <div style={{fontSize:8,color:"#909090",letterSpacing:2}}>v2 · ZWEI-DATEI-VERGLEICH · KFZ DIETRICH</div>
           </div>
         </div>
         {analysis&&<button onClick={reset} style={{background:"transparent",border:"1px solid #1a1a1a",
@@ -473,19 +473,19 @@ export default function App() {
           <div style={{display:"grid",gridTemplateColumns:"76px 1fr",gap:14,background:"#0b0b0b",
             border:"1px solid #181818",borderRadius:8,padding:14,marginBottom:14,alignItems:"center"}}>
             <div style={{textAlign:"center"}}><ScoreRing score={analysis.score}/>
-              <div style={{fontSize:7,color:"#585858",letterSpacing:2}}>SCORE</div></div>
+              <div style={{fontSize:7,color:"#a0a0a0",letterSpacing:2}}>SCORE</div></div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
               <div>
-                <div style={{fontSize:8,color:"#585858",letterSpacing:2,marginBottom:4}}>SOFTWARE</div>
+                <div style={{fontSize:8,color:"#a0a0a0",letterSpacing:2,marginBottom:4}}>SOFTWARE</div>
                 <div style={{fontSize:13,color:"#ff6b2b",fontWeight:700}}>{analysis.sw.label}</div>
                 <div style={{fontSize:9,color:"#707070"}}>{analysis.sw.engine} / {analysis.sw.gen}</div>
               </div>
               <div>
-                <div style={{fontSize:8,color:"#585858",letterSpacing:2,marginBottom:4}}>TEILENUMMER</div>
+                <div style={{fontSize:8,color:"#a0a0a0",letterSpacing:2,marginBottom:4}}>TEILENUMMER</div>
                 <div style={{fontSize:10,color:"#b0b0b0",fontFamily:"monospace"}}>{analysis.partNr||"---"}</div>
               </div>
               <div>
-                <div style={{fontSize:8,color:"#585858",letterSpacing:2,marginBottom:4}}>PARAMETER</div>
+                <div style={{fontSize:8,color:"#a0a0a0",letterSpacing:2,marginBottom:4}}>PARAMETER</div>
                 <div style={{fontSize:10,color:"#909090"}}>
                   <span style={{color:"#00ff88"}}>{analysis.okC} OK</span>
                   {" "}<span style={{color:"#f59e0b"}}>{analysis.params.filter(p=>p.result.status==="stock").length} St</span>
@@ -493,7 +493,7 @@ export default function App() {
                 </div>
               </div>
               <div>
-                <div style={{fontSize:8,color:"#585858",letterSpacing:2,marginBottom:4}}>MIRROR</div>
+                <div style={{fontSize:8,color:"#a0a0a0",letterSpacing:2,marginBottom:4}}>MIRROR</div>
                 <div style={{fontSize:9,color:analysis.mirror.ok?"#00ff88":analysis.mirror.d12<8000?"#f59e0b":"#ff3c3c"}}>
                   {analysis.mirror.ok?"OK":analysis.mirror.d12<8000?"NORMAL":"FEHLER"}
                 </div>
@@ -644,7 +644,7 @@ export default function App() {
                   );
                 })}
               </div>
-              <div style={{fontSize:8,color:"#505050",letterSpacing:2,marginBottom:7,display:"grid",
+              <div style={{fontSize:8,color:"#909090",letterSpacing:2,marginBottom:7,display:"grid",
                 gridTemplateColumns:"12px 120px 80px 50px 1fr",gap:8}}>
                 <span/><span>ADRESSE</span><span>GESAMT/DIFF</span><span>TYP</span><span>REGION</span>
               </div>
@@ -667,7 +667,7 @@ export default function App() {
                 );
               })}
               {analysis.diff.filter(b=>b.region.risk==="mirror"||b.region.risk==="code").length>0&&(
-                <div style={{marginTop:10,fontSize:8,color:"#505050"}}>
+                <div style={{marginTop:10,fontSize:8,color:"#909090"}}>
                   + {analysis.diff.filter(b=>b.region.risk==="mirror"||b.region.risk==="code").length} Bloecke in Code/Mirror (ausgeblendet)
                 </div>
               )}
@@ -697,7 +697,7 @@ export default function App() {
                 ))}
               </div>
               <div style={{background:"#0b0b0b",border:"1px solid #181818",borderRadius:8,padding:12}}>
-                <div style={{fontSize:7,color:"#505050",letterSpacing:2,marginBottom:6}}>VORSCHAU</div>
+                <div style={{fontSize:7,color:"#909090",letterSpacing:2,marginBottom:6}}>VORSCHAU</div>
                 <pre style={{fontSize:8,color:"#707070",lineHeight:1.6,overflow:"auto",maxHeight:250,
                   whiteSpace:"pre",fontFamily:"monospace",margin:0}}>
                   {buildExportText(analysis,tuneFile?.name,refFile?.name).split("\n").slice(0,25).join("\n")}
