@@ -36,9 +36,9 @@ const REGIONS = [
   { start:0x16B06, end:0x16B50, name:"Soft-Limiter Block",        risk:"drift",  color:"#ff3c3c" },
   { start:0x16B51, end:0x17FFF, name:"Misc Kennfelder",           risk:"low",    color:"#94a3b8" },
   { start:0x18000, end:0x1FFFF, name:"Mirror 1",                  risk:"mirror", color:"#2a2a3a" },
-  { start:0x20000, end:0x6FFFF, name:"ROM / Programmcode",        risk:"code",   color:"#3a3a3a" },
+  { start:0x20000, end:0x6FFFF, name:"ROM / Programmcode",        risk:"code",   color:"#707070" },
   { start:0x70000, end:0x77FFF, name:"Mirror 2",                  risk:"mirror", color:"#2a2a3a" },
-  { start:0x78000, end:0x7FFFF, name:"Boot / Checksummen",        risk:"info",   color:"#555" },
+  { start:0x78000, end:0x7FFFF, name:"Boot / Checksummen",        risk:"info",   color:"#909090" },
 ];
 
 const RISK_LABEL = { drift:"DRIFT", timing:"TIMING", medium:"KENNFELD", low:"NEBEN", code:"CODE", mirror:"MIRROR", info:"INFO" };
@@ -100,7 +100,7 @@ function mirrorCheck(buf) {
 
 function classifyAddr(addr) {
   for (const r of REGIONS) if (addr>=r.start && addr<=r.end) return r;
-  return {name:"Unbekannt",risk:"low",color:"#555"};
+  return {name:"Unbekannt",risk:"low",color:"#909090"};
 }
 
 function computeDiff(ref, tune) {
@@ -317,7 +317,7 @@ function TimingMap({vals,refVals,label}) {
         })}
         })}
       </div>
-      <div style={{display:"flex",gap:14,marginTop:5,fontSize:8,color:"#444"}}>
+      <div style={{display:"flex",gap:14,marginTop:5,fontSize:8,color:"#787878"}}>
         {refVals
           ? <><span style={{color:"#00ff88"}}>gruen = mehr Vorzuendung</span><span style={{color:"#ff3c3c"}}>rot = weniger</span></>
           : <><span style={{color:"hsl(220,60%,30%)"}}>dunkel = niedrig</span><span style={{color:"hsl(0,85%,47%)"}}>hell = hoch</span></>}
@@ -338,7 +338,7 @@ function DropZone({label,onFile,file,color,icon}) {
       <div style={{fontSize:20,marginBottom:5}}>{icon}</div>
       <div style={{fontSize:9,color,letterSpacing:2,marginBottom:4}}>{label}</div>
       {file?<div style={{fontSize:9,color:"#00ff88"}}>✓ {file.name}</div>
-            :<div style={{fontSize:9,color:"#333"}}>.bin / .FLS / 512KB</div>}
+            :<div style={{fontSize:9,color:"#666666"}}>.bin / .FLS / 512KB</div>}
       <input ref={inp} type="file" accept=".bin,.FLS,.fls" style={{display:"none"}} onChange={e=>onFile(e.target.files[0])}/>
     </div>
   );
@@ -355,11 +355,11 @@ function PRow({p}) {
   return (
     <div style={{display:"grid",gridTemplateColumns:"110px 75px 65px 55px 1fr 68px",alignItems:"center",
       padding:"4px 0",borderBottom:"1px solid #0e0e0e",fontSize:10}}>
-      <span style={{fontFamily:"monospace",color:"#888"}}>{p.label}</span>
-      <span style={{fontFamily:"monospace",color:vc}}>{v}<span style={{color:"#333",fontSize:8}}> {p.unit}</span>{r.note&&<span style={{color:"#555",fontSize:8}}> {r.note}</span>}</span>
-      {rv?<span style={{color:"#333",fontSize:9}}>Ref:{rv}</span>:<span/>}
+      <span style={{fontFamily:"monospace",color:"#d0d0d0"}}>{p.label}</span>
+      <span style={{fontFamily:"monospace",color:vc}}>{v}<span style={{color:"#666666",fontSize:8}}> {p.unit}</span>{r.note&&<span style={{color:"#909090",fontSize:8}}> {r.note}</span>}</span>
+      {rv?<span style={{color:"#666666",fontSize:9}}>Ref:{rv}</span>:<span/>}
       {delta!==null&&delta!==0?<span style={{color:delta>0?"#00ff88":"#ff3c3c",fontSize:9}}>{delta>0?"+":""}{delta}</span>:<span/>}
-      <span style={{color:"#2a2a2a",fontSize:9}}>Soll:{p.drift_soll===0xFFFF?"0xFFFF":p.drift_soll}</span>
+      <span style={{color:"#585858",fontSize:9}}>Soll:{p.drift_soll===0xFFFF?"0xFFFF":p.drift_soll}</span>
       <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:3}}>
         <Badge status={r.status}/><MDot ok={r.mirrorOk}/>
       </div>
@@ -420,7 +420,7 @@ export default function App() {
     : [];
 
   return (
-    <div style={{minHeight:"100vh",background:"#080808",color:"#c0c0c0",fontFamily:"'JetBrains Mono',monospace",
+    <div style={{minHeight:"100vh",background:"#080808",color:"#e8e8e8",fontFamily:"'JetBrains Mono',monospace",
       backgroundImage:"radial-gradient(ellipse at 15% 15%,#0a1a0a 0%,transparent 55%),radial-gradient(ellipse at 85% 85%,#0a0a1a 0%,transparent 55%)"}}>
 
       {/* Header */}
@@ -431,11 +431,11 @@ export default function App() {
             display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>⚡</div>
           <div>
             <div style={{fontSize:11,fontWeight:700,letterSpacing:3,color:"#ff6b2b"}}>ME2.8 DRIFT ANALYZER</div>
-            <div style={{fontSize:8,color:"#252525",letterSpacing:2}}>v2 · ZWEI-DATEI-VERGLEICH · KFZ DIETRICH</div>
+            <div style={{fontSize:8,color:"#505050",letterSpacing:2}}>v2 · ZWEI-DATEI-VERGLEICH · KFZ DIETRICH</div>
           </div>
         </div>
         {analysis&&<button onClick={reset} style={{background:"transparent",border:"1px solid #1a1a1a",
-          color:"#383838",padding:"4px 12px",borderRadius:4,cursor:"pointer",fontSize:9,letterSpacing:1,fontFamily:"monospace"}}>
+          color:"#686868",padding:"4px 12px",borderRadius:4,cursor:"pointer",fontSize:9,letterSpacing:1,fontFamily:"monospace"}}>
           RESET
         </button>}
       </div>
@@ -465,7 +465,7 @@ export default function App() {
 
         {error&&<div style={{background:"#110606",border:"1px solid #ff3c3c33",borderRadius:7,padding:"12px 16px",marginBottom:14}}>
           <div style={{color:"#ff3c3c",fontSize:10,marginBottom:3}}>FEHLER</div>
-          <div style={{fontSize:9,color:"#666"}}>{error}</div>
+          <div style={{fontSize:9,color:"#b0b0b0"}}>{error}</div>
         </div>}
 
         {analysis&&(<>
@@ -473,31 +473,31 @@ export default function App() {
           <div style={{display:"grid",gridTemplateColumns:"76px 1fr",gap:14,background:"#0b0b0b",
             border:"1px solid #181818",borderRadius:8,padding:14,marginBottom:14,alignItems:"center"}}>
             <div style={{textAlign:"center"}}><ScoreRing score={analysis.score}/>
-              <div style={{fontSize:7,color:"#2a2a2a",letterSpacing:2}}>SCORE</div></div>
+              <div style={{fontSize:7,color:"#585858",letterSpacing:2}}>SCORE</div></div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
               <div>
-                <div style={{fontSize:8,color:"#2a2a2a",letterSpacing:2,marginBottom:4}}>SOFTWARE</div>
+                <div style={{fontSize:8,color:"#585858",letterSpacing:2,marginBottom:4}}>SOFTWARE</div>
                 <div style={{fontSize:13,color:"#ff6b2b",fontWeight:700}}>{analysis.sw.label}</div>
-                <div style={{fontSize:9,color:"#3a3a3a"}}>{analysis.sw.engine} / {analysis.sw.gen}</div>
+                <div style={{fontSize:9,color:"#707070"}}>{analysis.sw.engine} / {analysis.sw.gen}</div>
               </div>
               <div>
-                <div style={{fontSize:8,color:"#2a2a2a",letterSpacing:2,marginBottom:4}}>TEILENUMMER</div>
-                <div style={{fontSize:10,color:"#666",fontFamily:"monospace"}}>{analysis.partNr||"---"}</div>
+                <div style={{fontSize:8,color:"#585858",letterSpacing:2,marginBottom:4}}>TEILENUMMER</div>
+                <div style={{fontSize:10,color:"#b0b0b0",fontFamily:"monospace"}}>{analysis.partNr||"---"}</div>
               </div>
               <div>
-                <div style={{fontSize:8,color:"#2a2a2a",letterSpacing:2,marginBottom:4}}>PARAMETER</div>
-                <div style={{fontSize:10,color:"#555"}}>
+                <div style={{fontSize:8,color:"#585858",letterSpacing:2,marginBottom:4}}>PARAMETER</div>
+                <div style={{fontSize:10,color:"#909090"}}>
                   <span style={{color:"#00ff88"}}>{analysis.okC} OK</span>
                   {" "}<span style={{color:"#f59e0b"}}>{analysis.params.filter(p=>p.result.status==="stock").length} St</span>
                   {" "}<span style={{color:"#ff3c3c"}}>{analysis.badC} Err</span>
                 </div>
               </div>
               <div>
-                <div style={{fontSize:8,color:"#2a2a2a",letterSpacing:2,marginBottom:4}}>MIRROR</div>
+                <div style={{fontSize:8,color:"#585858",letterSpacing:2,marginBottom:4}}>MIRROR</div>
                 <div style={{fontSize:9,color:analysis.mirror.ok?"#00ff88":analysis.mirror.d12<8000?"#f59e0b":"#ff3c3c"}}>
                   {analysis.mirror.ok?"OK":analysis.mirror.d12<8000?"NORMAL":"FEHLER"}
                 </div>
-                <div style={{fontSize:8,color:"#3a3a3a"}}>M1:{analysis.mirror.d12}B M2:{analysis.mirror.d13}B</div>
+                <div style={{fontSize:8,color:"#707070"}}>M1:{analysis.mirror.d12}B M2:{analysis.mirror.d13}B</div>
               </div>
             </div>
           </div>
@@ -548,7 +548,7 @@ export default function App() {
                       <span style={{fontSize:8,letterSpacing:2,color}}>{label}</span>
                       <Badge status={st}/>
                     </div>
-                    <div style={{fontSize:9,color:"#3a3a3a"}}>
+                    <div style={{fontSize:9,color:"#707070"}}>
                       <span style={{color:"#00ff88"}}>{ok}</span>/{ps.length} OK
                       {bad>0&&<span style={{color:"#ff3c3c"}}> / {bad} Fehler</span>}
                     </div>
@@ -568,7 +568,7 @@ export default function App() {
                       <span style={{fontSize:8,letterSpacing:2,color}}>{label}</span>
                       <Badge status={st}/>
                     </div>
-                    <div style={{fontSize:9,color:"#3a3a3a"}}>
+                    <div style={{fontSize:9,color:"#707070"}}>
                       {ms.map(m=><span key={m.id} style={{marginRight:8,color:m.result.status==="ok"?"#00ff88":"#ff3c3c"}}>
                         {m.label}: {m.result.detail}
                       </span>)}
@@ -602,8 +602,8 @@ export default function App() {
                   {ms.map(m=>(
                     <div key={m.id} style={{display:"grid",gridTemplateColumns:"110px 1fr 80px",alignItems:"center",
                       padding:"4px 0",borderBottom:"1px solid #0e0e0e",fontSize:10}}>
-                      <span style={{fontFamily:"monospace",color:"#777"}}>{m.label}</span>
-                      <span style={{color:"#2e2e2e",fontSize:9}}>{m.desc} / {m.result.detail}</span>
+                      <span style={{fontFamily:"monospace",color:"#e8e8e8"}}>{m.label}</span>
+                      <span style={{color:"#606060",fontSize:9}}>{m.desc} / {m.result.detail}</span>
                       <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:3}}>
                         <Badge status={m.result.status}/>
                         {m.result.mirrorOk!==undefined&&<MDot ok={m.result.mirrorOk}/>}
@@ -618,7 +618,7 @@ export default function App() {
           {/* TIMING */}
           {tab==="timing"&&(
             <div>
-              <div style={{fontSize:9,color:"#333",marginBottom:14,lineHeight:1.8}}>
+              <div style={{fontSize:9,color:"#666666",marginBottom:14,lineHeight:1.8}}>
                 {analysis.diff?"Farbe = Delta zur Referenz: gruen = mehr Vorzuendung, rot = weniger. Tooltip = absoluter Wert."
                   :"Absoluter Zuendwinkelwert. Dunkel = weniger Vorzuendung. 1 raw = 0.75 Grad."}
               </div>
@@ -644,7 +644,7 @@ export default function App() {
                   );
                 })}
               </div>
-              <div style={{fontSize:8,color:"#222",letterSpacing:2,marginBottom:7,display:"grid",
+              <div style={{fontSize:8,color:"#505050",letterSpacing:2,marginBottom:7,display:"grid",
                 gridTemplateColumns:"12px 120px 80px 50px 1fr",gap:8}}>
                 <span/><span>ADRESSE</span><span>GESAMT/DIFF</span><span>TYP</span><span>REGION</span>
               </div>
@@ -654,20 +654,20 @@ export default function App() {
                   <div key={i} style={{display:"grid",gridTemplateColumns:"12px 120px 80px 50px 1fr",
                     alignItems:"center",padding:"4px 0",borderBottom:"1px solid #0e0e0e",fontSize:9,gap:8}}>
                     <div style={{width:3,height:12,background:c,borderRadius:2}}/>
-                    <span style={{fontFamily:"monospace",color:"#555",fontSize:8}}>
+                    <span style={{fontFamily:"monospace",color:"#909090",fontSize:8}}>
                       0x{b.start.toString(16).toUpperCase().padStart(5,"0")}-0x{b.end.toString(16).toUpperCase().padStart(5,"0")}
                     </span>
-                    <span style={{color:"#444",fontSize:8}}>{b.total}B/{b.changed}B</span>
+                    <span style={{color:"#787878",fontSize:8}}>{b.total}B/{b.changed}B</span>
                     <span style={{fontSize:7,padding:"1px 4px",borderRadius:3,letterSpacing:1,
                       background:c+"22",color:c,border:"1px solid "+c+"44",whiteSpace:"nowrap"}}>
                       {RISK_LABEL[b.region.risk]||"?"}
                     </span>
-                    <span style={{color:"#777"}}>{b.region.name}</span>
+                    <span style={{color:"#e8e8e8"}}>{b.region.name}</span>
                   </div>
                 );
               })}
               {analysis.diff.filter(b=>b.region.risk==="mirror"||b.region.risk==="code").length>0&&(
-                <div style={{marginTop:10,fontSize:8,color:"#222"}}>
+                <div style={{marginTop:10,fontSize:8,color:"#505050"}}>
                   + {analysis.diff.filter(b=>b.region.risk==="mirror"||b.region.risk==="code").length} Bloecke in Code/Mirror (ausgeblendet)
                 </div>
               )}
@@ -686,8 +686,8 @@ export default function App() {
                 ].map(({t,i,d,fn})=>(
                   <div key={t} style={{background:"#0b0b0b",border:"1px solid #181818",borderRadius:8,padding:18,textAlign:"center"}}>
                     <div style={{fontSize:26,marginBottom:8,color:"#ff6b2b"}}>{i}</div>
-                    <div style={{fontSize:11,color:"#777",marginBottom:5}}>{t}</div>
-                    <div style={{fontSize:8,color:"#2a2a2a",marginBottom:14}}>{d}</div>
+                    <div style={{fontSize:11,color:"#e8e8e8",marginBottom:5}}>{t}</div>
+                    <div style={{fontSize:8,color:"#585858",marginBottom:14}}>{d}</div>
                     <button onClick={fn} style={{background:"#ff6b2b",border:"none",color:"#000",
                       padding:"7px 18px",borderRadius:4,cursor:"pointer",fontSize:9,
                       fontFamily:"monospace",letterSpacing:2,fontWeight:700}}>
@@ -697,8 +697,8 @@ export default function App() {
                 ))}
               </div>
               <div style={{background:"#0b0b0b",border:"1px solid #181818",borderRadius:8,padding:12}}>
-                <div style={{fontSize:7,color:"#222",letterSpacing:2,marginBottom:6}}>VORSCHAU</div>
-                <pre style={{fontSize:8,color:"#3a3a3a",lineHeight:1.6,overflow:"auto",maxHeight:250,
+                <div style={{fontSize:7,color:"#505050",letterSpacing:2,marginBottom:6}}>VORSCHAU</div>
+                <pre style={{fontSize:8,color:"#707070",lineHeight:1.6,overflow:"auto",maxHeight:250,
                   whiteSpace:"pre",fontFamily:"monospace",margin:0}}>
                   {buildExportText(analysis,tuneFile?.name,refFile?.name).split("\n").slice(0,25).join("\n")}
                 </pre>
