@@ -313,4 +313,64 @@ score = (ok_params + ok_maps) / (total_valid_params + total_valid_maps) * 100
 
 ---
 
+---
+
+## Vollständige A2L-Analyse — Abgelehnte Parameter (dokumentiert)
+
+Alle drei A2L-Dateien wurden vollständig durchsucht (8.183 Parameter total).
+Folgende Kandidaten wurden untersucht und **bewusst nicht ins Tool übernommen**:
+
+### Notlauf-Funktionen (nur bei Sensor-Ausfall aktiv)
+| Parameter  | Beschreibung                              | Grund für Ablehnung               |
+|------------|-------------------------------------------|-----------------------------------|
+| DKMAXKL    | DK-Begrenzung im DK-Poti-Notfahren       | Greift nur bei defektem DK-Sensor |
+| DWDKSBAMX  | max. Soll/Ist DK-Winkel-Abweichung       | DK-Überwachungsdiagnose           |
+| DFSEFON    | max. plausible FSE-Abweichung            | Sensor-Plausibilitätsdiagnose     |
+| ELMRVMAX   | max. reversible Umschaltungen Ersatzbetrieb | Notlauf-Zähler                 |
+
+### AT-spezifische Kupplungssteuerung (irrelevant für Drift)
+| Parameter  | Beschreibung                              | Grund für Ablehnung               |
+|------------|-------------------------------------------|-----------------------------------|
+| EBG_MAX    | Einschaltbegrenzungs-Maximalmoment        | Nur bei Handschalter-Anfahren     |
+| DFH_EBG    | Geschwindigkeitsschwelle Einschaltbegrenzung | Kupplung, AT irrelevant        |
+
+### Bereits inaktiv — kein Safety Monitor nötig
+| Parameter  | Beschreibung                              | Wert / Grund                      |
+|------------|-------------------------------------------|-----------------------------------|
+| KLPMAX     | DK-Begrenzung Leistungsbegrenzung (Kurve)| v5=32762 = 100% DK = inaktiv      |
+| N_M_UGH    | Schubabschaltung Untergrenze Handschalter| v5=0 = deaktiviert                |
+| FWBRMASK1/2| Steuermaske Drehzahlbegrenzung           | Fahrzeugkonfig-Bits, nicht ändern |
+
+### Komfort-Funktionen (kein Drift-Einfluss)
+| Parameter  | Beschreibung                              | Grund für Ablehnung               |
+|------------|-------------------------------------------|-----------------------------------|
+| FWBD1/FWBD2| Md-Reduzierrampen Fahrervorgabe          | Normale Pedalkennlinien-Rampen    |
+| FWBNOA/U   | Drehzahlschwellen Fahrervorgabe-Md-Begr. | Komfort-Funktion AT               |
+| FGR/Tempomat| Alle Tempomat-Parameter                 | Deaktiviert bei manuellem Fahren  |
+| CWLLEW     | ZW-Regler in P/N dauerhaft              | Nur in Fahrstufe P oder N aktiv   |
+
+### Unklare Kodierung — zu riskant
+| Parameter  | Beschreibung                              | Grund für Ablehnung               |
+|------------|-------------------------------------------|-----------------------------------|
+| NMOTMAX    | Maximaldrehzahlschwelle                   | Wert 64168 unplausibel (=0xFAA8) |
+| KFZWMDB/A  | Dauerzündwinkel-Kennfelder               | Mirror-Fehler + unplausible Werte |
+| KFZWOPT_UM | Opt. ZW Funktionsüberwachung             | Nur intern für Überwachung        |
+
+### Allgemeine Kategorie-Ablehnungen
+- **133 Diagnose-Sperrzeiten** (Freigabe/Sperre-Schwellen): OBD-spezifisch, kein Drift-Einfluss
+- **Alle ZAS-Parameter** (N0TZAS, N1TZAS etc.): Zylinderabschaltung, für Drift irrelevant
+- **Alle AGR-Parameter** (außer KFAGR Map): EGR-Diagnose-Schwellen
+- **Alle Klima-Parameter**: Kompressor-Steuerung und Moment-Kompensation
+
+---
+
+## Fazit: Tool-Vollständigkeit
+
+Nach Analyse von **8.183 Parametern** aus 3 A2L-Dateien (Stand März 2026):
+
+✅ **Alle sinnvoll prüf- und änderbaren Drift-Parameter sind erfasst**
+✅ **Alle relevanten Safety-Parameter sind im Safety Monitor**
+✅ **Alle Ablehnungen sind begründet dokumentiert**
+✅ **4 SW-Varianten ME2.8 + ME2.8.1 mit verifizierten Adressen**
+
 Für das React/Browser-Tool: https://nd37181.github.io/me28-drift-analyzer/
