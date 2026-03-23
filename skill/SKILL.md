@@ -29,6 +29,7 @@ A2L-Referenzen: 8412K000.a2l (ME2.8.1 AMG, Mercedes-AMG GmbH) für Adressverifik
 | 88200000      | 5.5L M113  | ME2.8 Gen2 | S55, CL55, E55 (früh)       | nein  |
 | 88200001      | 5.5L M113  | ME2.8 Gen2 | S55, CL55                   | nein  |
 | 88800000      | 5.0L M113  | ME2.8 Gen3 | SL500, E500, diverse        | nein  |
+| 88620000      | 5.0L M113  | ME2.8 Gen4 | S500 W220, CL500 C215       | nein  |
 | 84xxK/81xxK   | 5.5L M113K | ME2.8.1   | SL55, E55, CLS55, C55 AMG   | ja    |
 
 ME2.8.1 wird erkannt wenn Versionsstring "ME2.8.1" oder "K000" enthält.
@@ -301,6 +302,9 @@ score = (ok_params + ok_maps) / (total_valid_params + total_valid_maps) * 100
 
 - **87200000**: Versatz -0x027C für alle bekannten Adressen.
 - **88800000**: NMAX-Block und TMASR liegen +0x20C höher (nmaxShift).
+- **88620000** (S500 W220, CL500): Eigene Adresstabelle — KEIN einheitlicher Versatz! Blöcke liegen an verschiedenen Adressen.
+  NMAX @ 0x12FCE, SoftLimiter @ 0x157BC, SWSCHUB @ 0x13252, TMASR @ 0x164F8, VNMAXRF @ 0x13DAE
+  KFAGR @ 0x10608 (≠ 0x105E8!), KFZW @ 0x128C4. Verifiziert via A2L ME2_8_88620000.A2L.
 - **KFZWOPT** (`0x1645C` ME2.8 / `0x155F0` ME2.8.1): Optimaler ZW-Kennfeld — Referenz.
 - **KFZWZA** (`0x126E4` ME2.8 / `0x125AE` ME2.8.1): ZW bei ZAS-Betrieb. Im SL55 = 0.
 - **SWSCHUB4**: Wert `0xFF02` ist normaler Stock-Wert für 5.5L ECU, zählt als "Stock".
