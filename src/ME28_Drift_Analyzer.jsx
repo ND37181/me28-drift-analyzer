@@ -79,6 +79,16 @@ const PARAMS = [
   { id:"TMASR",     addr:0x16548,  addr281:0x15472, size:1, cat:"ASR",  label:"TMASR",     unit:"raw", drift_soll:255, soll281:0,      stock_range:[25,80], nmaxParam:true },
   // FWVMAX: NUR ME2.8.1 — absoluter Vmax-Begrenzer (Byte, 0xFF = 306 km/h = aus)
   { id:"FWVMAX",    addr:0x14F6B,  size:1, cat:"VMAX", label:"FWVMAX",    unit:"",    drift_soll:255, soll281:255,    stock_range:[50,200], me281Only:true },
+
+  // ── SAFETY-MONITOR (nur ME2.8 88x00000) ─────────────────────────────────────
+  // Diese Parameter NICHT ändern — schützen Antriebsstrang und Motor
+  // Angezeigt mit Schloss-Symbol, nur Plausibilitätsprüfung
+  { id:"DZWENH",    addr:0x15A63,  size:1, cat:"SAFE", label:"DZWENH",    unit:"°",   safe_range:[10,60], safe_note:"ZW-Rücknahme hartes WE (21°=OK)", me28Only:true },
+  { id:"DZWENW",    addr:0x15A64,  size:1, cat:"SAFE", label:"DZWENW",    unit:"°",   safe_range:[10,60], safe_note:"ZW-Rücknahme weiches WE (31°=OK)", me28Only:true },
+  { id:"DZWENWH",   addr:0x15A65,  size:1, cat:"SAFE", label:"DZWENWH",   unit:"°",   safe_range:[10,60], safe_note:"ZW-Rücknahme WE Handschalter (24°=OK)", me28Only:true },
+  { id:"ETA_ARLSD", addr:0x10312,  size:2, cat:"SAFE", label:"ETA_ARLSD", unit:"",    safe_range:[3000,15000], safe_note:"ZW-Wirkungsgrad Anti-Ruckel", me28Only:true },
+  { id:"KLVL",      addr:0x12805,  size:2, cat:"SAFE", label:"KLVL",      unit:"",    safe_range:[25000,42000], safe_note:"Vollast-Anfettungsfaktor", me28Only:true },
+  { id:"FVLMX",     addr:0x1037A,  size:2, cat:"SAFE", label:"FVLMX",     unit:"",    safe_range:[1200,3000], safe_note:"Vollast-Anfettung Obergrenze", me28Only:true },
 ];
 
 const MAPS = [
@@ -182,6 +192,14 @@ function analyzeParam(buf, p, shift, ref, nmaxShift, is281) {
   const isHighSpeed = p.cat==="VMAX" && value > 5000 && p.id.startsWith("KSVMAX");
   // FWVMAX ME2.8.1: 0xFF = max 306 km/h = deaktiviert
   const isFwvmaxOff = p.id==="FWVMAX" && value===0xFF;
+
+  // SAFE-Parameter: Plausibilitätsprüfung statt Drift-Soll
+  if (p.cat==="SAFE") {
+    const inRange = p.safe_range && value>=p.safe_range[0] && value<=p.safe_range[1];
+    const phys = p.unit==="°" ? (value*0.75).toFixed(1)+"°" : String(value);
+    return {valid:true,value,m1:m1v,m2:m2v,mirrorOk,isDriftOk:inRange,isStock:false,
+            status:inRange?"ok":"bad", soll:null, refValue, note:phys, usedShift};
+  }
 
   const isDriftOk = value===soll || isDisabled || isHighSpeed || isFwvmaxOff;
   const isStock   = !isDriftOk && value>=p.stock_range[0] && value<=p.stock_range[1];
@@ -391,6 +409,7 @@ function DropZone({label,onFile,file,color,icon}) {
 function PRow({p}) {
   const r=p.result;
   if(!r.valid) return null;
+  const isSafe = p.cat==="SAFE";
   const v=r.value===0xFFFF?"0xFFFF":String(r.value);
   const rv=r.refValue!==null?(r.refValue===0xFFFF?"0xFFFF":String(r.refValue)):null;
   const delta=(r.refValue!==null&&r.value!==null&&r.value!==undefined)?r.value-r.refValue:null;
@@ -398,12 +417,13 @@ function PRow({p}) {
   const noteStr=r.note?" "+r.note:"";
   return (
     <div style={{display:"grid",gridTemplateColumns:"110px 75px 65px 55px 1fr 68px",alignItems:"center",
-      padding:"4px 0",borderBottom:"1px solid #0e0e0e",fontSize:10}}>
-      <span style={{fontFamily:"monospace",color:"#d0d0d0"}}>{p.label}</span>
-      <span style={{fontFamily:"monospace",color:vc}}>{v}<span style={{color:"#666666",fontSize:8}}> {p.unit}</span>{r.note&&<span style={{color:"#909090",fontSize:8}}> {r.note}</span>}</span>
+      padding:"4px 0",borderBottom:"1px solid #0e0e0e",fontSize:10,
+      background:isSafe?"rgba(255,200,50,0.03)":"transparent"}}>
+      <span style={{fontFamily:"monospace",color:isSafe?"#c8a000":"#d0d0d0"}}>{isSafe?"🔒 ":""}{p.label}</span>
+      <span style={{fontFamily:"monospace",color:vc}}>{v}<span style={{color:"#666666",fontSize:8}}> {p.unit}</span>{r.note&&<span style={{color:"#909090",fontSize:8}}> {r.note}</span>}{isSafe&&p.safe_note&&<div style={{fontSize:7,color:"#8a7000",marginTop:1}}>{p.safe_note}</div>}</span>
       {rv?<span style={{color:"#666666",fontSize:9}}>Ref:{rv}</span>:<span/>}
       {delta!==null&&delta!==0?<span style={{color:delta>0?"#00ff88":"#ff3c3c",fontSize:9}}>{delta>0?"+":""}{delta}</span>:<span/>}
-      <span style={{color:"#585858",fontSize:9}}>Soll:{p.drift_soll===0xFFFF?"0xFFFF":p.drift_soll}</span>
+      <span style={{color:"#585858",fontSize:9}}>{isSafe?`Bereich:${p.safe_range[0]}-${p.safe_range[1]}`:`Soll:${p.drift_soll===0xFFFF?"0xFFFF":p.drift_soll}`}</span>
       <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:3}}>
         <Badge status={r.status}/><MDot ok={r.mirrorOk}/>
       </div>
@@ -418,6 +438,7 @@ const CAT_DEFS = {
   SAS:{label:"SCHUBABSCHALTUNG",color:"#34d399"},
   ATF:{label:"WANDLERSCHUTZ",color:"#60a5fa"},
   ASR:{label:"ASR TEMPERATUR",color:"#f472b6"},
+  SAFE:{label:"🔒 SICHERHEITSFUNKTIONEN (nicht ändern)",color:"#c8a000"},
 };
 const MAP_CAT_DEFS = {
   EGR:{label:"ABGASRUECKFUEHRUNG",color:"#94a3b8"},
