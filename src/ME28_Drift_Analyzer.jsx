@@ -4,10 +4,12 @@ const M1 = 0x8000;
 const M2 = 0x60000;
 
 const SW_VARIANTS = {
-  "87200000": { label:"87200000", engine:"5.0L", gen:"Gen1 (37/00)", addrShift:-0x027C, nmaxShift:0 },
-  "88200000": { label:"88200000", engine:"5.5L", gen:"Gen2 (37/01)", addrShift:0,       nmaxShift:0 },
-  "88200001": { label:"88200001", engine:"5.5L", gen:"Gen2-B",       addrShift:0,       nmaxShift:0 },
-  "88800000": { label:"88800000", engine:"5.0L", gen:"Gen3 (37/02)", addrShift:0,       nmaxShift:0x20C },
+  "87200000": { label:"87200000", engine:"5.0L",   gen:"Gen1 (37/00)", addrShift:-0x027C, nmaxShift:0,     is281:false },
+  "88200000": { label:"88200000", engine:"5.5L",   gen:"Gen2 (37/01)", addrShift:0,       nmaxShift:0,     is281:false },
+  "88200001": { label:"88200001", engine:"5.5L",   gen:"Gen2-B",       addrShift:0,       nmaxShift:0,     is281:false },
+  "88800000": { label:"88800000", engine:"5.0L",   gen:"Gen3 (37/02)", addrShift:0,       nmaxShift:0x20C, is281:false },
+  // ME2.8.1 AMG-Varianten (8490K000, 8150K000, 8412K000 etc.)
+  "_ME281":   { label:"ME2.8.1",  engine:"5.5L K", gen:"ME2.8.1 AMG",  addrShift:0,       nmaxShift:0,     is281:true  },
 };
 
 const REGIONS = [
@@ -45,29 +47,38 @@ const RISK_LABEL = { drift:"DRIFT", timing:"TIMING", medium:"KENNFELD", low:"NEB
 const RISK_COLOR = { drift:"#ff3c3c", timing:"#fbbf24", medium:"#f59e0b", low:"#555", code:"#444", mirror:"#333", info:"#60a5fa" };
 
 const PARAMS = [
-  { id:"NMAXAT",    addr:0x12DC2,size:2,cat:"NMAX",label:"NMAXAT",   unit:"rpm",drift_soll:6600, stock_range:[100,300], nmaxParam:true },
-  { id:"NMAXD",     addr:0x12DC4,size:2,cat:"NMAX",label:"NMAXD",nmaxParam:true,    unit:"rpm",drift_soll:6600, stock_range:[80,200] },
-  { id:"NMAXGNL",   addr:0x12DC6,size:2,cat:"NMAX",label:"NMAXGNL",nmaxParam:true,  unit:"rpm",drift_soll:6600, stock_range:[80,200] },
-  { id:"NMAXK",     addr:0x12DC8,size:2,cat:"NMAX",label:"NMAXK",nmaxParam:true,    unit:"rpm",drift_soll:6600, stock_range:[80,200] },
-  { id:"NMAXR",     addr:0x12DCA,size:2,cat:"NMAX",label:"NMAXR",nmaxParam:true,    unit:"rpm",drift_soll:6600, stock_range:[80,200] },
-  { id:"NMAXWF",    addr:0x12DDC,size:2,cat:"NMAX",label:"NMAXWF",nmaxParam:true,   unit:"rpm",drift_soll:6500, stock_range:[60,120] },
-  { id:"FWNMAXWF",  addr:0x16B06,size:2,cat:"SOFT",label:"FWNMAXWF", unit:"rpm",drift_soll:6500, stock_range:[4000,5200] },
-  { id:"FWNTOEL",   addr:0x16B08,size:2,cat:"SOFT",label:"FWNTOEL",  unit:"rpm",drift_soll:6500, stock_range:[4000,5200] },
-  { id:"FWTNMAXK",  addr:0x16B12,size:2,cat:"SOFT",label:"FWTNMAXK", unit:"ms", drift_soll:200,  stock_range:[1000,5000] },
-  { id:"FWTRAMP",   addr:0x16B14,size:2,cat:"SOFT",label:"FWTRAMP",  unit:"ms", drift_soll:200,  stock_range:[1000,5000] },
-  { id:"FWVMAXD",   addr:0x16B16,size:2,cat:"SOFT",label:"FWVMAXD",  unit:"",   drift_soll:0,    stock_range:[1,9999] },
-  { id:"FWVMAXR",   addr:0x16B18,size:2,cat:"SOFT",label:"FWVMAXR",  unit:"",   drift_soll:0,    stock_range:[1,9999] },
-  { id:"FWWNMAXD",  addr:0x16B1A,size:2,cat:"SOFT",label:"FWWNMAXD", unit:"rpm",drift_soll:6400, stock_range:[4000,5500] },
-  { id:"FWWNMAXKA", addr:0x16B1C,size:2,cat:"SOFT",label:"FWWNMAXKA",unit:"rpm",drift_soll:6600, stock_range:[4000,5500] },
-  { id:"FWWNMAXKH", addr:0x16B1E,size:2,cat:"SOFT",label:"FWWNMAXKH",unit:"rpm",drift_soll:6600, stock_range:[4000,5500] },
-  { id:"FWWNMAXR",  addr:0x16B20,size:2,cat:"SOFT",label:"FWWNMAXR", unit:"rpm",drift_soll:6200, stock_range:[4000,5500] },
-  { id:"KLAMDRED",  addr:0x16B22,size:2,cat:"SOFT",label:"KLAMDRED", unit:"",   drift_soll:0,    stock_range:[1,9999] },
-  ...Array.from({length:8},(_,i)=>({ id:"VMAXOG"+i, addr:0x16B32+i*2, size:2, cat:"SOFT", label:"VMAXOG["+i+"]", unit:"", drift_soll:0xFFFF, stock_range:[0,5000] })),
-  ...Array.from({length:6},(_,i)=>({ id:"KSVMAX"+i, addr:0x15134+i*2, size:2, cat:"VMAX", label:"KSVMAX["+i+"]", unit:"km/h*10", drift_soll:0xFFFF, stock_range:[1500,2000] })),
-  { id:"SWSCHUB3",  addr:0x132A2,size:2,cat:"SAS", label:"SWSCHUB3", unit:"",   drift_soll:0,    stock_range:[1,9999] },
-  { id:"SWSCHUB4",  addr:0x132A4,size:2,cat:"SAS", label:"SWSCHUB4", unit:"",   drift_soll:0,    stock_range:[1,9999] },
-  { id:"VNMAXRF",   addr:0x13BA2,size:1,cat:"ATF", label:"VNMAXRF",  unit:"",   drift_soll:0,    stock_range:[1,255] },
-  { id:"TMASR",     addr:0x16548,size:1,cat:"ASR", label:"TMASR",    unit:"C",  drift_soll:255,  stock_range:[25,80], nmaxParam:true },
+  // ── NMAX ── ME2.8: addr+nmaxShift | ME2.8.1: addr281 direkt
+  { id:"NMAXAT",    addr:0x12DC2, addr281:0x12B5E, size:2, cat:"NMAX", label:"NMAXAT",    unit:"rpm",  drift_soll:6600, soll281:0xFFFF, stock_range:[100,300],  nmaxParam:true },
+  { id:"NMAXD",     addr:0x12DC4, addr281:0x12B60, size:2, cat:"NMAX", label:"NMAXD",     unit:"rpm",  drift_soll:6600, soll281:0xFFFF, stock_range:[80,200],   nmaxParam:true },
+  { id:"NMAXGNL",   addr:0x12DC6, addr281:0x12B62, size:2, cat:"NMAX", label:"NMAXGNL",   unit:"rpm",  drift_soll:6600, soll281:0xFFFF, stock_range:[80,200],   nmaxParam:true },
+  { id:"NMAXK",     addr:0x12DC8, addr281:0x12B64, size:2, cat:"NMAX", label:"NMAXK",     unit:"rpm",  drift_soll:6600, soll281:0xFFFF, stock_range:[80,200],   nmaxParam:true },
+  { id:"NMAXR",     addr:0x12DCA, addr281:0x12B66, size:2, cat:"NMAX", label:"NMAXR",     unit:"rpm",  drift_soll:6600, soll281:0xFFFF, stock_range:[80,200],   nmaxParam:true },
+  { id:"NMAXWF",    addr:0x12DDC, addr281:0x12B78, size:2, cat:"NMAX", label:"NMAXWF",    unit:"rpm",  drift_soll:6500, soll281:0xFFFF, stock_range:[60,120],   nmaxParam:true },
+  // ── Soft-Limiter ── ME2.8: 0x16B0x | ME2.8.1: 0x14Bxx
+  { id:"FWNMAXWF",  addr:0x16B06, addr281:0x14B6C, size:2, cat:"SOFT", label:"FWNMAXWF",  unit:"rpm",  drift_soll:6500, soll281:0xFFFF, stock_range:[4000,5200] },
+  { id:"FWNTOEL",   addr:0x16B08, addr281:0x14B6E, size:2, cat:"SOFT", label:"FWNTOEL",   unit:"rpm",  drift_soll:6500, soll281:0xFFFF, stock_range:[4000,5200] },
+  { id:"FWTNMAXK",  addr:0x16B12, addr281:0x14B78, size:2, cat:"SOFT", label:"FWTNMAXK",  unit:"ms",   drift_soll:200,  soll281:0xFFFF, stock_range:[1000,5000] },
+  { id:"FWTRAMP",   addr:0x16B14, addr281:0x14B7A, size:2, cat:"SOFT", label:"FWTRAMP",   unit:"ms",   drift_soll:200,  soll281:0xFFFF, stock_range:[1000,5000] },
+  { id:"FWVMAXD",   addr:0x16B16, addr281:0x14B7C, size:2, cat:"SOFT", label:"FWVMAXD",   unit:"",     drift_soll:0,    soll281:0xFFFF, stock_range:[1,9999] },
+  { id:"FWVMAXR",   addr:0x16B18, addr281:0x14B80, size:2, cat:"SOFT", label:"FWVMAXR",   unit:"",     drift_soll:0,    soll281:0xFFFF, stock_range:[1,9999] },
+  { id:"FWWNMAXD",  addr:0x16B1A, addr281:0x14B82, size:2, cat:"SOFT", label:"FWWNMAXD",  unit:"rpm",  drift_soll:6400, soll281:0xFFFF, stock_range:[4000,5500] },
+  { id:"FWWNMAXKA", addr:0x16B1C, addr281:0x14B84, size:2, cat:"SOFT", label:"FWWNMAXKA", unit:"rpm",  drift_soll:6600, soll281:0xFFFF, stock_range:[4000,5500] },
+  { id:"FWWNMAXKH", addr:0x16B1E, addr281:0x14B86, size:2, cat:"SOFT", label:"FWWNMAXKH", unit:"rpm",  drift_soll:6600, soll281:0xFFFF, stock_range:[4000,5500] },
+  { id:"FWWNMAXR",  addr:0x16B20, addr281:0x14B88, size:2, cat:"SOFT", label:"FWWNMAXR",  unit:"rpm",  drift_soll:6200, soll281:0xFFFF, stock_range:[4000,5500] },
+  { id:"KLAMDRED",  addr:0x16B22, addr281:0x14B8A, size:2, cat:"SOFT", label:"KLAMDRED",  unit:"",     drift_soll:0,    soll281:0,      stock_range:[1,9999] },
+  // VMAXOG: ME2.8 @ 0x16B32 | ME2.8.1 @ 0x14B9A
+  ...Array.from({length:8},(_,i)=>({ id:"VMAXOG"+i, addr:0x16B32+i*2, addr281:0x14B9A+i*2, size:2, cat:"SOFT", label:"VMAXOG["+i+"]", unit:"", drift_soll:0xFFFF, soll281:0xFFFF, stock_range:[0,5000] })),
+  // KSVMAX: nur ME2.8 (nicht in ME2.8.1 A2L)
+  ...Array.from({length:6},(_,i)=>({ id:"KSVMAX"+i, addr:0x15134+i*2, size:2, cat:"VMAX", label:"KSVMAX["+i+"]", unit:"km/h*10", drift_soll:0xFFFF, stock_range:[1500,2000], me28Only:true })),
+  // SAS: nur ME2.8
+  { id:"SWSCHUB3",  addr:0x132A2,  size:2, cat:"SAS",  label:"SWSCHUB3",  unit:"",    drift_soll:0,   stock_range:[1,9999], me28Only:true },
+  { id:"SWSCHUB4",  addr:0x132A4,  size:2, cat:"SAS",  label:"SWSCHUB4",  unit:"",    drift_soll:0,   stock_range:[1,9999], me28Only:true },
+  // VNMAXRF: ME2.8 @ 0x13BA2 | ME2.8.1 @ 0x13B84
+  { id:"VNMAXRF",   addr:0x13BA2,  addr281:0x13B84, size:1, cat:"ATF",  label:"VNMAXRF",   unit:"",    drift_soll:0,   soll281:0,      stock_range:[1,255] },
+  // TMASR: ME2.8 = direkt °C (soll 255) | ME2.8.1 = invertiertes NTC (soll 0!)
+  { id:"TMASR",     addr:0x16548,  addr281:0x15472, size:1, cat:"ASR",  label:"TMASR",     unit:"raw", drift_soll:255, soll281:0,      stock_range:[25,80], nmaxParam:true },
+  // FWVMAX: NUR ME2.8.1 — absoluter Vmax-Begrenzer (Byte, 0xFF = 306 km/h = aus)
+  { id:"FWVMAX",    addr:0x14F6B,  size:1, cat:"VMAX", label:"FWVMAX",    unit:"",    drift_soll:255, soll281:255,    stock_range:[50,200], me281Only:true },
 ];
 
 const MAPS = [
@@ -83,8 +94,17 @@ const ru8  = (b,a) => (a<b.length)   ? b[a] : 0;
 
 function detectSW(buf) {
   const s = String.fromCharCode(...Array.from(buf.slice(0x7FFB0,0x7FFC0)).filter(b=>b>31&&b<127));
-  for (const [k,v] of Object.entries(SW_VARIANTS)) if (s.includes(k)) return {...v,raw:s.trim()};
-  return {label:"UNKNOWN",engine:"?",gen:"?",addrShift:0,raw:s.trim()};
+  for (const [k,v] of Object.entries(SW_VARIANTS)) {
+    if (k.startsWith("_")) continue;
+    if (s.includes(k)) return {...v, raw:s.trim()};
+  }
+  // ME2.8.1 erkennen: enthält "ME2.8.1" oder "K000" im Versionsstring
+  if (s.includes("ME2.8.1") || /\d{4}K\d{3}/.test(s)) {
+    const m = s.match(/(\d{4}K\d{3})/);
+    const label = m ? m[1] : "ME2.8.1";
+    return {...SW_VARIANTS["_ME281"], label, raw:s.trim()};
+  }
+  return {label:"UNKNOWN",engine:"?",gen:"?",addrShift:0,is281:false,raw:s.trim()};
 }
 function getPartNr(buf) {
   return String.fromCharCode(...Array.from(buf.slice(0x7FFE9,0x7FFF5)).filter(b=>(b>47&&b<58)||(b>64&&b<91)||(b>96&&b<123)));
@@ -126,32 +146,55 @@ function computeDiff(ref, tune) {
   });
 }
 
-function analyzeParam(buf, p, shift, ref, nmaxShift) {
-  // For NMAX+TMASR params in 88800000: try shifted address first, fall back to base
-  let addr = p.addr+shift;
-  let usedShift = 0;
-  if (p.nmaxParam && nmaxShift) {
-    const shiftedAddr = p.addr + shift + nmaxShift;
-    if (shiftedAddr >= 0 && shiftedAddr+p.size <= buf.length) {
-      addr = shiftedAddr;
-      usedShift = nmaxShift;
+function analyzeParam(buf, p, shift, ref, nmaxShift, is281) {
+  // ME2.8.1-only params: überspringen wenn ME2.8
+  if (p.me281Only && !is281) return {valid:false};
+  // ME2.8-only params: überspringen wenn ME2.8.1
+  if (p.me28Only  &&  is281) return {valid:false};
+
+  let addr, usedShift=0;
+  if (is281 && p.addr281 != null) {
+    // ME2.8.1: direkte Adresse aus A2L (kein Shift nötig)
+    addr = p.addr281;
+  } else {
+    // ME2.8: Basis-Adresse + globaler Shift
+    addr = p.addr + shift;
+    // 88800000 NMAX-Block sitzt 0x20C höher
+    if (p.nmaxParam && nmaxShift) {
+      const sa = p.addr + shift + nmaxShift;
+      if (sa >= 0 && sa+p.size <= buf.length) { addr = sa; usedShift = nmaxShift; }
     }
   }
   if (addr<0 || addr+p.size>buf.length) return {valid:false};
+
   const value    = p.size===2 ? ru16(buf,addr) : ru8(buf,addr);
   const m1v      = p.size===2 ? ru16(buf,addr+M1) : ru8(buf,addr+M1);
   const m2v      = p.size===2 ? ru16(buf,addr+M2) : ru8(buf,addr+M2);
   const refValue = ref ? (p.size===2 ? ru16(ref,addr) : ru8(ref,addr)) : null;
   const mirrorOk = value===m1v && value===m2v;
-  // 0xFFFF on a limiter param = "disabled" = drift OK
-  const isDisabled = value===0xFFFF && p.drift_soll!==0xFFFF;
-  // KSVMAX: any value > 5000 (= 500 km/h) is effectively deactivated
-  const isHighSpeed = p.cat==="VMAX" && value > 5000;
-  const isDriftOk = value===p.drift_soll || isDisabled || isHighSpeed;
+
+  // Variantenspezifischer Soll-Wert
+  const soll = (is281 && p.soll281 != null) ? p.soll281 : p.drift_soll;
+
+  // 0xFFFF auf Limiter = deaktiviert = OK (außer wenn soll selbst 0xFFFF)
+  const isDisabled  = value===0xFFFF && soll!==0xFFFF;
+  // KSVMAX: >5000 = effektiv deaktiviert
+  const isHighSpeed = p.cat==="VMAX" && value > 5000 && p.id.startsWith("KSVMAX");
+  // FWVMAX ME2.8.1: 0xFF = max 306 km/h = deaktiviert
+  const isFwvmaxOff = p.id==="FWVMAX" && value===0xFF;
+
+  const isDriftOk = value===soll || isDisabled || isHighSpeed || isFwvmaxOff;
   const isStock   = !isDriftOk && value>=p.stock_range[0] && value<=p.stock_range[1];
   const status    = isDriftOk?"ok" : isStock?"stock" : "bad";
-  const note      = isDisabled?"0xFFFF=deaktiviert" : isHighSpeed?`${(value*0.1).toFixed(0)}km/h`:null;
-  return {valid:true,value,m1:m1v,m2:m2v,mirrorOk,isDriftOk,isStock,status,refValue,note,usedShift};
+
+  let note = null;
+  if (isDisabled)   note = "0xFFFF=deaktiviert";
+  else if (isHighSpeed) note = `${(value*0.1).toFixed(0)}km/h`;
+  else if (isFwvmaxOff) note = "0xFF=306km/h=aus";
+  else if (p.id==="TMASR" && is281) note = value===0?"NTC-Min=aus":"NTC-aktiv";
+  else if (p.id==="FWVMAX" && is281 && !isFwvmaxOff) note = `${(value*306.122/255).toFixed(0)}km/h`;
+
+  return {valid:true,value,m1:m1v,m2:m2v,mirrorOk,isDriftOk,isStock,status,soll,refValue,note,usedShift};
 }
 
 function analyzeMap(buf, m, shift, ref) {
@@ -187,7 +230,8 @@ function runAnalysis(buf, ref) {
   const partNr = getPartNr(buf);
   const mirror = mirrorCheck(buf);
   const nmaxShift = sw.nmaxShift||0;
-  const params = PARAMS.map(p=>({...p,result:analyzeParam(buf,p,shift,ref,nmaxShift)}));
+  const is281    = sw.is281||false;
+  const params = PARAMS.map(p=>({...p,result:analyzeParam(buf,p,shift,ref,nmaxShift,is281)}));
   const maps   = MAPS.map(m=>({...m,result:analyzeMap(buf,m,shift,ref)}));
   const diff   = ref ? computeDiff(ref,buf) : null;
   const okC    = params.filter(p=>p.result.status==="ok").length;
@@ -479,6 +523,7 @@ export default function App() {
                 <div style={{fontSize:8,color:"#a0a0a0",letterSpacing:2,marginBottom:4}}>SOFTWARE</div>
                 <div style={{fontSize:13,color:"#ff6b2b",fontWeight:700}}>{analysis.sw.label}</div>
                 <div style={{fontSize:9,color:"#707070"}}>{analysis.sw.engine} / {analysis.sw.gen}</div>
+              {analysis.sw.is281&&<div style={{fontSize:7,background:"#ff6b2b22",color:"#ff6b2b",padding:"1px 5px",borderRadius:2,marginTop:3,letterSpacing:1}}>ME2.8.1 AMG</div>}
               </div>
               <div>
                 <div style={{fontSize:8,color:"#a0a0a0",letterSpacing:2,marginBottom:4}}>TEILENUMMER</div>
