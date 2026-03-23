@@ -293,7 +293,8 @@ score = (ok_params + ok_maps) / (total_valid_params + total_valid_maps) * 100
    ME2.8.1: NMAX(addr281), SoftLimit(addr281), VNMAXRF(addr281)
             TMASR→0 (invertiert!), FWVMAX→0xFF
 5. Mirror-Konsistenz sicherstellen (alle geänderten Param in P+M1+M2)
-6. Analyzer-Score ≥ 90% anstreben
+6. Bei 88620000: zusätzlich NMOTMAX @ 0x12FFA → 255 (6375 rpm) setzen!
+7. Analyzer-Score ≥ 90% anstreben
 ```
 
 ---
@@ -305,6 +306,9 @@ score = (ok_params + ok_maps) / (total_valid_params + total_valid_maps) * 100
 - **88620000** (S500 W220, CL500): Eigene Adresstabelle — KEIN einheitlicher Versatz! Blöcke liegen an verschiedenen Adressen.
   NMAX @ 0x12FCE, SoftLimiter @ 0x157BC, SWSCHUB @ 0x13252, TMASR @ 0x164F8, VNMAXRF @ 0x13DAE
   KFAGR @ 0x10608 (≠ 0x105E8!), KFZW @ 0x128C4. Verifiziert via A2L ME2_8_88620000.A2L.
+  **NMOTMAX @ 0x12FFA: 1 Byte, NQ25 (×25 rpm/raw), stock=168=4200 rpm, Drift-Soll=255=6375 rpm!**
+  Im Tool: `addr8862`-Felder und `me8862Only:true` für 88620000-exklusive Parameter.
+  Konzept: jede SW-Variante hat eigene Adressfelder (addr, addr281, addr8862).
 - **KFZWOPT** (`0x1645C` ME2.8 / `0x155F0` ME2.8.1): Optimaler ZW-Kennfeld — Referenz.
 - **KFZWZA** (`0x126E4` ME2.8 / `0x125AE` ME2.8.1): ZW bei ZAS-Betrieb. Im SL55 = 0.
 - **SWSCHUB4**: Wert `0xFF02` ist normaler Stock-Wert für 5.5L ECU, zählt als "Stock".
@@ -352,7 +356,7 @@ Folgende Kandidaten wurden untersucht und **bewusst nicht ins Tool übernommen**
 ### Unklare Kodierung — zu riskant
 | Parameter  | Beschreibung                              | Grund für Ablehnung               |
 |------------|-------------------------------------------|-----------------------------------|
-| ~~NMOTMAX~~| ~~Maximaldrehzahlschwelle~~               | ~~Korrigiert: siehe unten~~      |
+| _(NMOTMAX war hier — korrigiert, jetzt im Tool, siehe ⚠ Abschnitt unten)_     ||
 | KFZWMDB/A  | Dauerzündwinkel-Kennfelder               | Mirror-Fehler + unplausible Werte |
 | KFZWOPT_UM | Opt. ZW Funktionsüberwachung             | Nur intern für Überwachung        |
 
