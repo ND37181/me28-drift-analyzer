@@ -352,7 +352,7 @@ Folgende Kandidaten wurden untersucht und **bewusst nicht ins Tool übernommen**
 ### Unklare Kodierung — zu riskant
 | Parameter  | Beschreibung                              | Grund für Ablehnung               |
 |------------|-------------------------------------------|-----------------------------------|
-| NMOTMAX    | Maximaldrehzahlschwelle                   | Wert 64168 unplausibel (=0xFAA8) |
+| ~~NMOTMAX~~| ~~Maximaldrehzahlschwelle~~               | ~~Korrigiert: siehe unten~~      |
 | KFZWMDB/A  | Dauerzündwinkel-Kennfelder               | Mirror-Fehler + unplausible Werte |
 | KFZWOPT_UM | Opt. ZW Funktionsüberwachung             | Nur intern für Überwachung        |
 
@@ -361,6 +361,28 @@ Folgende Kandidaten wurden untersucht und **bewusst nicht ins Tool übernommen**
 - **Alle ZAS-Parameter** (N0TZAS, N1TZAS etc.): Zylinderabschaltung, für Drift irrelevant
 - **Alle AGR-Parameter** (außer KFAGR Map): EGR-Diagnose-Schwellen
 - **Alle Klima-Parameter**: Kompressor-Steuerung und Moment-Kompensation
+
+---
+
+## ⚠ Korrektur: NMOTMAX (88620000 spezifisch)
+
+NMOTMAX ist ein **1-Byte Parameter** mit NQ25-Kodierung (×25 rpm/raw), kein 16-Bit Wert.
+Früherer Analysefehler: `ru16()` statt `ru8()` verwendet → falsche Interpretation.
+
+| Eigenschaft | Wert |
+|---|---|
+| Adresse (88620000) | 0x12FFA |
+| Größe | 1 Byte |
+| Konversion | NQ25: raw × 25 rpm |
+| Stock 88620000 | raw=168 = **4.200 rpm** |
+| Drift-Soll | raw=255 = **6.375 rpm** (Maximum) |
+| Kategorie | NMAX-Limiter (absoluter Override) |
+
+**Kritisch für 88620000-Drift-Files:** NMOTMAX = 4.200 rpm liegt unter dem gesetzten
+NMAX von 6.600 rpm — der Motor würde trotz korrektem NMAX-Tuning bei 4.200 rpm abregeln!
+NMOTMAX muss auf **255 raw** gesetzt werden.
+
+NMOTMAX ist nicht in der 8412K000.A2L (ME2.8.1) enthalten → nur für SW 88620000.
 
 ---
 

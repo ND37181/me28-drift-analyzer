@@ -81,6 +81,11 @@ const PARAMS = [
   // FWVMAX: NUR ME2.8.1 — absoluter Vmax-Begrenzer (Byte, 0xFF = 306 km/h = aus)
   { id:"FWVMAX",    addr:0x14F6B,  size:1, cat:"VMAX", label:"FWVMAX",    unit:"",    drift_soll:255, soll281:255,    stock_range:[50,200], me281Only:true },
 
+  // NMOTMAX: Absoluter Drehzahl-Override (nur 88620000) — 1 Byte, ×25 rpm/raw
+  // raw=255 = 6375 rpm (Maximum), stock 88620000 = 168 raw = 4200 rpm!
+  { id:"NMOTMAX", addr8862:0x12FFA, size:1, cat:"NMAX", label:"NMOTMAX",
+    unit:"rpm", drift_soll:255, soll281:null, stock_range:[100,200], me8862Only:true },
+
   // ── SAFETY-MONITOR (nur ME2.8 88x00000) ─────────────────────────────────────
   // Diese Parameter NICHT ändern — schützen Antriebsstrang und Motor
   // Angezeigt mit Schloss-Symbol, nur Plausibilitätsprüfung
@@ -168,10 +173,12 @@ function computeDiff(ref, tune) {
 }
 
 function analyzeParam(buf, p, shift, ref, nmaxShift, is281, sw) {
-  // ME2.8.1-only params: überspringen wenn ME2.8
+  // ME2.8.1-only params: überspringen wenn nicht is281
   if (p.me281Only && !is281) return {valid:false};
   // ME2.8-only params: überspringen wenn ME2.8.1
   if (p.me28Only  &&  is281) return {valid:false};
+  // 88620000-only params: nur für diese SW-Variante
+  if (p.me8862Only && !(sw && sw.is8862)) return {valid:false};
 
   let addr, usedShift=0;
   const is8862 = !is281 && (sw && sw.is8862);
