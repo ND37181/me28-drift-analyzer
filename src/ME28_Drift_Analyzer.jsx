@@ -97,6 +97,16 @@ const MAPS = [
   { id:"KFTORQ2", addr:0x153C8, size:24,  cat:"CAN_ASR", label:"Torque2",desc:"Torque2 [12W]",         check:"ffff_word", wc:12 },
   { id:"KFZW",    addr:0x12864, size:256, cat:"IGN",      label:"KFZW",   desc:"Zuendwinkel [16x16]",  check:"timing" },
   { id:"KFZWZA",  addr:0x126E4, size:256, cat:"IGN",      label:"KFZWZA", desc:"Zuendwinkel ZA [16x16]",check:"timing" },
+  // ── Safety-Kennfelder (nur ME2.8.1, addr281) ─────────────────────────────
+  // KFZWTMA: Kaltstart-ZW-Vorverstellung. Letzte Zeile (warm) muss = 0 sein
+  { id:"KFZWTMA", addr281:0x1256E, size:256, cat:"SAFE_MAP", label:"KFZWTMA",
+    desc:"Kaltstart ZW-Korrektur [16x16]", check:"safe_warmrow", me281Only:true },
+  // KFZWDY: ZW bei Lastdynamik. Letzte Zeile (warm) muss = 0 sein
+  { id:"KFZWDY",  addr281:0x1252E, size:256, cat:"SAFE_MAP", label:"KFZWDY",
+    desc:"ZW Lastdynamik [16x16]", check:"safe_warmrow", me281Only:true },
+  // KFATMZW: Abgastemperatur-ZW-Schutz. Ø > 20 raw = Katalysatorschutz aktiv
+  { id:"KFATMZW", addr281:0x10746, size:256, cat:"SAFE_MAP", label:"KFATMZW",
+    desc:"Abgastemperatur-Schutz ZW [16x16]", check:"safe_avgmin", safe_min:20, me281Only:true },
 ];
 
 const ru16 = (b,a) => (a+1<b.length) ? b[a]|(b[a+1]<<8) : 0;
@@ -215,9 +225,30 @@ function analyzeParam(buf, p, shift, ref, nmaxShift, is281) {
   return {valid:true,value,m1:m1v,m2:m2v,mirrorOk,isDriftOk,isStock,status,soll,refValue,note,usedShift};
 }
 
-function analyzeMap(buf, m, shift, ref) {
-  const addr = m.addr+shift;
+function analyzeMap(buf, m, shift, ref, is281) {
+  // ME2.8.1-only Maps: überspringen wenn nicht is281
+  if (m.me281Only && !is281) return {valid:false};
+
+  // addr281 direkt nutzen wenn is281, sonst addr+shift
+  const addr = (is281 && m.addr281!=null) ? m.addr281 : (m.addr!=null ? m.addr+shift : -1);
   if (addr<0 || addr+m.size>buf.length) return {valid:false};
+
+  // Safety-Kennfelder: letzte Zeile (warm) muss 0 sein
+  if (m.check==="safe_warmrow") {
+    const warmRow = Array.from(buf.slice(addr+240, addr+256)); // letzte Zeile 16x16
+    const warmAvg = warmRow.reduce((a,b)=>a+b,0)/warmRow.length;
+    const ok = warmAvg === 0;
+    return {valid:true, status:ok?"ok":"bad",
+            detail:`Warme Zeile: Ø ${(warmAvg*0.75).toFixed(1)}° (Soll: 0°)`};
+  }
+  // Safety-Kennfelder: Mindest-Durchschnitt
+  if (m.check==="safe_avgmin") {
+    const vals = Array.from(buf.slice(addr, addr+m.size));
+    const avg  = vals.reduce((a,b)=>a+b,0)/vals.length;
+    const ok = avg >= (m.safe_min||0);
+    return {valid:true, status:ok?"ok":"bad",
+            detail:`Ø ${avg.toFixed(1)} raw (Soll >= ${m.safe_min||0})`};
+  }
   if (m.check==="all_zero") {
     const nz = Array.from(buf.slice(addr,addr+m.size)).filter(x=>x!==0).length;
     return {valid:true, status:nz===0?"ok":"bad", detail:`${nz}/${m.size}B != 0`};
@@ -250,7 +281,7 @@ function runAnalysis(buf, ref) {
   const nmaxShift = sw.nmaxShift||0;
   const is281    = sw.is281||false;
   const params = PARAMS.map(p=>({...p,result:analyzeParam(buf,p,shift,ref,nmaxShift,is281)}));
-  const maps   = MAPS.map(m=>({...m,result:analyzeMap(buf,m,shift,ref)}));
+  const maps   = MAPS.map(m=>({...m,result:analyzeMap(buf,m,shift,ref,is281)}));
   const diff   = ref ? computeDiff(ref,buf) : null;
   const okC    = params.filter(p=>p.result.status==="ok").length;
   const badC   = params.filter(p=>p.result.status==="bad").length;
@@ -443,6 +474,7 @@ const CAT_DEFS = {
 const MAP_CAT_DEFS = {
   EGR:{label:"ABGASRUECKFUEHRUNG",color:"#94a3b8"},
   CAN_ASR:{label:"CAN-ASR DREHMOMENTTABELLEN",color:"#ff3c3c"},
+  SAFE_MAP:{label:"🔒 SICHERHEITS-KENNFELDER (nicht ändern)",color:"#c8a000"},
   IGN:{label:"ZUENDWINKEL-KENNFELDER",color:"#fbbf24"},
 };
 

@@ -211,6 +211,23 @@ Zu magere Einstellung = thermischer Motorschaden. Nur auf Prüfstand mit Lambda-
 
 Diese Parameter nur in ME2.8 (88x00000) auswerten — ME2.8.1 hat andere Adressen dort.
 
+### 🔒 Safety-Kennfelder (nur ME2.8.1, SAFE_MAP Kategorie)
+
+| Kennfeld  | ME2.8.1 Adresse | Prüflogik                | Funktion                          |
+|-----------|-----------------|--------------------------|-----------------------------------|
+| KFZWTMA   | 0x1256E         | warm_row_avg == 0        | Kaltstart ZW-Vorverstellung       |
+| KFZWDY    | 0x1252E         | warm_row_avg == 0        | ZW-Korrektur bei Lastdynamik      |
+| KFATMZW   | 0x10746         | avg >= 20 raw            | Abgastemperatur-Schutz via ZW     |
+
+**KFZWTMA:** Additiver ZW-Offset für kalten Motor. Letzte Zeile (Betriebstemperatur) = 0 = normal.
+Wenn letzte Zeile ≠ 0 → Zündwinkel wird dauerhaft beeinflusst → Motorschutz-Problem.
+
+**KFZWDY:** ZW-Korrektur bei dynamischen Lastwechseln (Gas geben). Letzte Zeile warm = 0 = normal.
+Nicht ändern — schützt beim Durchtreten gegen mechanische Überlastung.
+
+**KFATMZW:** Reduziert ZW um Abgastemperatur zu begrenzen (Katalysatorschutz).
+Ø < 20 raw → Schutz inaktiv → Katalysator und Abgasanlage ungeschützt.
+
 ---
 
 ## Bewertungslogik
