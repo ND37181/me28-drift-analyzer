@@ -91,9 +91,27 @@ function doPost(e) {
 
   try {
     Logger.log("doPost aufgerufen");
-    const rawBody = e.postData ? e.postData.contents : null;
-    Logger.log("Body Länge: " + (rawBody ? rawBody.length : "null"));
-    if (!rawBody) return respond(output, 400, "Kein Body empfangen");
+    Logger.log("e vorhanden: " + (e !== null && e !== undefined));
+    try { Logger.log("e keys: " + Object.keys(e || {}).join(", ")); } catch(ek) { Logger.log("e keys Fehler: "+ek); }
+    Logger.log("postData: " + JSON.stringify(e.postData || null));
+    
+    // Apps Script: verschiedene Body-Quellen prüfen
+    let rawBody = null;
+    if (e.postData && e.postData.contents) {
+      rawBody = e.postData.contents;
+      Logger.log("Body aus postData.contents: " + rawBody.length + " Zeichen");
+    } else if (e.parameter && e.parameter.body) {
+      rawBody = e.parameter.body;
+      Logger.log("Body aus parameter.body: " + rawBody.length + " Zeichen");
+    } else {
+      // Alle Parameter loggen
+      Logger.log("parameter: " + JSON.stringify(e.parameter || {}));
+      Logger.log("parameters: " + JSON.stringify(e.parameters || {}));
+    }
+    if (!rawBody) {
+      Logger.log("KEIN BODY GEFUNDEN");
+      return respond(output, 400, "Kein Body");
+    }
     
     const data = JSON.parse(rawBody);
 
@@ -142,12 +160,15 @@ function doPost(e) {
     return respond(output, 200, "Gespeichert", { saved: finalFilename });
 
   } catch (err) {
-    // Fehler als Datei in Drive schreiben (sichtbar für Debugging)
+    Logger.log("CATCH FEHLER: " + err.message);
+    Logger.log("CATCH STACK: " + err.stack);
     try {
       DriveApp.getFolderById(CONFIG.DRIVE_FOLDER_ID)
         .createFile("ERROR_" + new Date().getTime() + ".txt",
           "Fehler: " + err.message + "\nStack: " + err.stack, "text/plain");
-    } catch(e2) {}
+    } catch(e2) {
+      Logger.log("Drive-Error-File fehlgeschlagen: " + e2.message);
+    }
     return respond(output, 500, "Fehler: " + err.message);
   }
 }
