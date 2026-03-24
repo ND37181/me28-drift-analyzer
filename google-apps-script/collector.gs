@@ -67,8 +67,8 @@ function testSheetsAccess() {
 // Simuliert einen echten POST mit Mini-Payload — im Editor ausführen zum Testen
 function testPost() {
   const fakeEvent = {
-    postData: {
-      contents: JSON.stringify({
+    parameter: {
+      data: JSON.stringify({
         accepted:   true,
         file:       Utilities.base64Encode("TESTDATEN"),  // kleines Fake-Binary
         sha256:     "test_sha256_" + new Date().getTime(),
@@ -79,7 +79,6 @@ function testPost() {
         mirrorOk:   true,
         analysis:   { score: 87, sw: "88200001", partNr: "TEST", okCount: 10, badCount: 0 },
       })
-    }
   };
   const result = doPost(fakeEvent);
   Logger.log("testPost Ergebnis: " + result.getContent());
@@ -96,20 +95,17 @@ function doPost(e) {
     Logger.log("postData: " + JSON.stringify(e.postData || null));
     
     // Apps Script: verschiedene Body-Quellen prüfen
+    // URLSearchParams → e.parameter.data | JSON-POST → e.postData.contents
     let rawBody = null;
-    if (e.postData && e.postData.contents) {
+    if (e.parameter && e.parameter.data) {
+      rawBody = e.parameter.data;
+      Logger.log("Body aus parameter.data: " + rawBody.length + " Zeichen");
+    } else if (e.postData && e.postData.contents) {
       rawBody = e.postData.contents;
       Logger.log("Body aus postData.contents: " + rawBody.length + " Zeichen");
-    } else if (e.parameter && e.parameter.body) {
-      rawBody = e.parameter.body;
-      Logger.log("Body aus parameter.body: " + rawBody.length + " Zeichen");
     } else {
-      // Alle Parameter loggen
       Logger.log("parameter: " + JSON.stringify(e.parameter || {}));
-      Logger.log("parameters: " + JSON.stringify(e.parameters || {}));
-    }
-    if (!rawBody) {
-      Logger.log("KEIN BODY GEFUNDEN");
+      Logger.log("postData: " + JSON.stringify(e.postData || null));
       return respond(output, 400, "Kein Body");
     }
     

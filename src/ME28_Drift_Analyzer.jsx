@@ -721,12 +721,14 @@ export default function App() {
         },
       };
 
-      // Google Apps Script benötigt no-cors (gibt kein CORS-Header zurück)
+      // URLSearchParams = "simple" request → kein CORS-Preflight nötig
+      // Apps Script empfängt via e.parameter.data
+      const form = new URLSearchParams();
+      form.append("data", JSON.stringify(payload));
       await fetch(COLLECTOR_URL, {
-        method:  "POST",
-        mode:    "no-cors",
-
-        body:    JSON.stringify(payload),
+        method: "POST",
+        mode:   "no-cors",
+        body:   form,
       });
       // no-cors = opaque response, kein Status-Check möglich → immer "done"
       const seen2 = JSON.parse(localStorage.getItem("me28_seen")||"[]");
