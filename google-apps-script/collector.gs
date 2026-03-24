@@ -64,13 +64,35 @@ function testSheetsAccess() {
 // ═══════════════════════════════════════════════════════════════
 // HAUPTFUNKTION
 // ═══════════════════════════════════════════════════════════════
+// Simuliert einen echten POST mit Mini-Payload — im Editor ausführen zum Testen
+function testPost() {
+  const fakeEvent = {
+    postData: {
+      contents: JSON.stringify({
+        accepted:   true,
+        file:       btoa("TESTDATEN"),  // kleines Fake-Binary
+        sha256:     "test_sha256_" + new Date().getTime(),
+        filename:   "test.bin",
+        sw:         "88200001",
+        score:      87,
+        engine:     "5.5L",
+        mirrorOk:   true,
+        analysis:   { score: 87, sw: "88200001", partNr: "TEST", okCount: 10, badCount: 0 },
+      })
+    }
+  };
+  const result = doPost(fakeEvent);
+  Logger.log("testPost Ergebnis: " + result.getContent());
+}
+
 function doPost(e) {
   const output = ContentService.createTextOutput();
   output.setMimeType(ContentService.MimeType.JSON);
 
   try {
-    // Apps Script empfängt no-cors POST — Body in e.postData.contents
+    Logger.log("doPost aufgerufen");
     const rawBody = e.postData ? e.postData.contents : null;
+    Logger.log("Body Länge: " + (rawBody ? rawBody.length : "null"));
     if (!rawBody) return respond(output, 400, "Kein Body empfangen");
     
     const data = JSON.parse(rawBody);
