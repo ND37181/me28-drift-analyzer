@@ -70,7 +70,7 @@ function testPost() {
     postData: {
       contents: JSON.stringify({
         accepted:   true,
-        file:       btoa("TESTDATEN"),  // kleines Fake-Binary
+        file:       Utilities.base64Encode("TESTDATEN"),  // kleines Fake-Binary
         sha256:     "test_sha256_" + new Date().getTime(),
         filename:   "test.bin",
         sw:         "88200001",
