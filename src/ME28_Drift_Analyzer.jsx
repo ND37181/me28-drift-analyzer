@@ -1175,9 +1175,9 @@ export default function App() {
 
           </div>
           <div style={{borderTop:"1px solid #111",paddingTop:8,textAlign:"center",
-            fontSize:7,color:"#383838",letterSpacing:1}}>
+            fontSize:7,color:"#ff3c3c",letterSpacing:1}}>
             ME2.8 / ME2.8.1 DRIFT ANALYZER · NUR FÜR DEN INTERNEN GEBRAUCH ·
-            KFZ Dietrich · Hardegsen-Gladebeck · nils@kfz-dietrich.de
+            KFZ Dietrich GmbH &amp; Co. KG · Hardegsen-Gladebeck · drift@kfz-dietrich.de
           </div>
 
           {/* Werbung */}
