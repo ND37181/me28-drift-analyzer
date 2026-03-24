@@ -504,16 +504,18 @@ function buildExportJSON(an, tuneName, refName) {
   }, null, 2);
 }
 
-function buildExportText(an, tuneName, refName) {
-  const L=["=".repeat(55),"  ME2.8 DRIFT ANALYZER - PRUEFPROTOKOLL","  KFZ Dietrich","=".repeat(55),
+function buildExportText(an, tuneName, refName, T) {
+  const paramLabel = T ? T.tabParams : "PARAMETER";
+  const mapsLabel  = T ? T.tabMaps   : "KENNFELDER";
+  const L=[...["=".repeat(55),"  ME2.8 DRIFT ANALYZER - PRUEFPROTOKOLL","  KFZ Dietrich","=".repeat(55),
     "Erstellt:   "+new Date().toLocaleString("de-DE"),
     "Datei:      "+tuneName, refName?"Referenz:   "+refName:"",
     "","SOFTWARE",
     "  SW:       "+an.sw.label+" ("+an.sw.engine+" / "+an.sw.gen+")",
     "  Teilenr.: "+(an.partNr||"-"),
     "","SCORE: "+an.score+"%","",
-    "MIRROR","  P<>M1: "+an.mirror.d12+"B  P<>M2: "+an.mirror.d13+"B  "+( an.mirror.ok?"OK":"KORRUPT!"),
-    "",T.tabParams,
+    "MIRROR","  P<>M1: "+an.mirror.d12+"B  P<>M2: "+an.mirror.d13+"B  "+(an.mirror.ok?"OK":"KORRUPT!"),
+    "",paramLabel,
     ...an.params.filter(p=>p.result.valid).map(p=>{
       const r=p.result;
       const v=r.value===0xFFFF?"0xFFFF":String(r.value);
@@ -521,7 +523,7 @@ function buildExportText(an, tuneName, refName) {
       const st=r.status==="ok"?"OK":r.status==="stock"?"STOCK":"FEHLER";
       return "  ["+st+"] "+p.label.padEnd(12)+" "+v.padEnd(8)+p.unit+rf+(!r.mirrorOk?" [MIRROR!]":"");
     }),
-    "",T.tabMaps,
+    "",mapsLabel,
     ...an.maps.filter(m=>m.result.valid).map(m=>"  ["+(m.result.status==="ok"?"OK":"FEHLER")+"] "+m.label.padEnd(12)+" "+m.result.detail),
     "",
     ...(an.diff?[
@@ -531,7 +533,7 @@ function buildExportText(an, tuneName, refName) {
       ),"",
     ]:[]),
     "=".repeat(55),
-  ];
+  ]];
   return L.join("\n");
 }
 
@@ -1106,7 +1108,7 @@ export default function App() {
                   {t:T.exportJSON,i:"{}",d:T.exportJSONd,
                     fn:()=>downloadFile(buildExportJSON(analysis,tuneFile?.name,refFile?.name),"ME28_"+tuneFile?.name?.replace(/\.[^.]+$/,"")+"_Score"+Math.round(analysis.score)+"pct.json","application/json")},
                   {t:T.exportTXT,i:"=",d:T.exportTXTd,
-                    fn:()=>downloadFile(buildExportText(analysis,tuneFile?.name,refFile?.name),"ME28_Protokoll_"+tuneFile?.name?.replace(/\.[^.]+$/,"")+"_Score"+Math.round(analysis.score)+"pct.txt","text/plain")},
+                    fn:()=>downloadFile(buildExportText(analysis,tuneFile?.name,refFile?.name,T),"ME28_Protokoll_"+tuneFile?.name?.replace(/\.[^.]+$/,"")+"_Score"+Math.round(analysis.score)+"pct.txt","text/plain")},
                 ].map(({t,i,d,fn})=>(
                   <div key={t} style={{background:"#0b0b0b",border:"1px solid #181818",borderRadius:8,padding:18,textAlign:"center"}}>
                     <div style={{fontSize:26,marginBottom:8,color:"#ff6b2b"}}>{i}</div>
@@ -1124,7 +1126,7 @@ export default function App() {
                 <div style={{fontSize:7,color:"#909090",letterSpacing:2,marginBottom:6}}>VORSCHAU</div>
                 <pre style={{fontSize:8,color:"#707070",lineHeight:1.6,overflow:"auto",maxHeight:250,
                   whiteSpace:"pre",fontFamily:"monospace",margin:0}}>
-                  {buildExportText(analysis,tuneFile?.name,refFile?.name).split("\n").slice(0,25).join("\n")}
+                  {buildExportText(analysis,tuneFile?.name,refFile?.name,T).split("\n").slice(0,25).join("\n")}
                 </pre>
               </div>
             </div>
