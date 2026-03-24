@@ -1145,12 +1145,10 @@ export default function App() {
             {/* Impressum */}
             <div>
               <div style={{fontSize:8,color:"#909090",letterSpacing:2,marginBottom:6}}>IMPRESSUM</div>
-              <div>KFZ Dietrich</div>
-              <div>Nils Dietrich</div>
-              <div>Hauptstraße 2</div>
+              <div>KFZ Dietrich mbH &amp; Co. KG</div>
+              <div>Meckelstraße 8</div>
               <div>37181 Hardegsen-Gladebeck</div>
-              <div style={{marginTop:4}}>Tel: <a href="tel:+495505123456" style={{color:"#505050",textDecoration:"none"}}>auf Anfrage</a></div>
-              <div>E-Mail: <a href="mailto:nils@kfz-dietrich.de" style={{color:"#606060",textDecoration:"none"}}>nils@kfz-dietrich.de</a></div>
+              <div style={{marginTop:4}}>E-Mail: <a href="mailto:drift@kfz-dietrich.com" style={{color:"#606060",textDecoration:"none"}}>drift@kfz-dietrich.com</a></div>
             </div>
 
             {/* Rechtliches */}
