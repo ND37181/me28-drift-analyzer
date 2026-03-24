@@ -95,17 +95,24 @@ function doPost(e) {
     Logger.log("postData: " + JSON.stringify(e.postData || null));
     
     // Apps Script: verschiedene Body-Quellen prüfen
-    // URLSearchParams → e.parameter.data | JSON-POST → e.postData.contents
+    // Body lesen: URLSearchParams kommt als "data=<urlencoded>" in postData.contents
     let rawBody = null;
     if (e.parameter && e.parameter.data) {
+      // Apps Script hat die Form-Parameter bereits dekodiert
       rawBody = e.parameter.data;
-      Logger.log("Body aus parameter.data: " + rawBody.length + " Zeichen");
+      Logger.log("Body aus e.parameter.data: " + rawBody.length + " Zeichen");
     } else if (e.postData && e.postData.contents) {
-      rawBody = e.postData.contents;
-      Logger.log("Body aus postData.contents: " + rawBody.length + " Zeichen");
+      const raw = e.postData.contents;
+      if (raw.startsWith("data=")) {
+        // URLSearchParams: manuell URL-dekodieren
+        rawBody = decodeURIComponent(raw.slice(5).replace(/\+/g," "));
+        Logger.log("Body aus postData URL-decoded: " + rawBody.length + " Zeichen");
+      } else {
+        rawBody = raw;
+        Logger.log("Body aus postData.contents direkt: " + rawBody.length + " Zeichen");
+      }
     } else {
-      Logger.log("parameter: " + JSON.stringify(e.parameter || {}));
-      Logger.log("postData: " + JSON.stringify(e.postData || null));
+      Logger.log("KEIN BODY: parameter=" + JSON.stringify(e.parameter||{}) + " postData=" + JSON.stringify(e.postData||null));
       return respond(output, 400, "Kein Body");
     }
     
