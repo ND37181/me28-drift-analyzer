@@ -1181,6 +1181,27 @@ export default function App() {
             ME2.8 / ME2.8.1 DRIFT ANALYZER · NUR FÜR DEN INTERNEN GEBRAUCH ·
             KFZ Dietrich · Hardegsen-Gladebeck · nils@kfz-dietrich.de
           </div>
+
+          {/* Werbung */}
+          <a href="https://motorsport.kfz-dietrich.com/drift-support/"
+            target="_blank" rel="noopener noreferrer"
+            style={{display:"block",textDecoration:"none",marginTop:12,
+              background:"linear-gradient(90deg,#1a0a00,#2a1200,#1a0a00)",
+              border:"1px solid #ff6b2b44",borderRadius:6,
+              padding:"10px 18px",textAlign:"center",
+              transition:"border-color 0.2s",cursor:"pointer"}}
+            onMouseEnter={e=>e.currentTarget.style.borderColor="#ff6b2b"}
+            onMouseLeave={e=>e.currentTarget.style.borderColor="#ff6b2b44"}>
+            <div style={{fontSize:8,color:"#ff6b2b",letterSpacing:3,marginBottom:3}}>
+              ⚡ DRIFT TUNING
+            </div>
+            <div style={{fontSize:10,color:"#e8e8e8",fontWeight:700,letterSpacing:1,marginBottom:3}}>
+              Die besten Drift Tunings kaufen bei KFZ Dietrich
+            </div>
+            <div style={{fontSize:8,color:"#707070",letterSpacing:1}}>
+              motorsport.kfz-dietrich.com/drift-support
+            </div>
+          </a>
         </div>
       </div>
 
