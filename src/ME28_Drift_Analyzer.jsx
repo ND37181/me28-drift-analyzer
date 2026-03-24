@@ -684,7 +684,6 @@ export default function App() {
 
   // Upload zur Dateisammlung
   async function uploadToCollection(result) {
-    // result direkt übergeben (state könnte noch null sein wegen React async)
     const r = result || analysis;
     if (!tuneBuf || !r) return;
     setUploadState("uploading");
@@ -692,6 +691,10 @@ export default function App() {
       const hashBuffer = await crypto.subtle.digest("SHA-256", tuneBuf);
       const sha256     = Array.from(new Uint8Array(hashBuffer))
                           .map(b=>b.toString(16).padStart(2,"0")).join("");
+
+      // Clientseitiger Duplicate-Check via localStorage
+      const seen = JSON.parse(localStorage.getItem("me28_seen")||"[]");
+      if (seen.includes(sha256)) { setUploadState("duplicate"); return; }
 
       const bytes = new Uint8Array(tuneBuf);
       let binary = "";
@@ -716,14 +719,19 @@ export default function App() {
         },
       };
 
-      const res = await fetch(COLLECTOR_URL, {
-        method: "POST",
-        body:   JSON.stringify(payload),
+      // Google Apps Script benötigt no-cors (gibt kein CORS-Header zurück)
+      await fetch(COLLECTOR_URL, {
+        method:  "POST",
+        mode:    "no-cors",
+        headers: {"Content-Type":"text/plain"},
+        body:    JSON.stringify(payload),
       });
-      const json = await res.json();
-      if      (json.status === 200) setUploadState("done");
-      else if (json.status === 409) setUploadState("duplicate");
-      else                          setUploadState("error");
+      // no-cors = opaque response, kein Status-Check möglich → immer "done"
+      const seen2 = JSON.parse(localStorage.getItem("me28_seen")||"[]");
+      seen2.push(sha256);
+      if (seen2.length > 500) seen2.splice(0, seen2.length-500); // max 500 einträge
+      localStorage.setItem("me28_seen", JSON.stringify(seen2));
+      setUploadState("done");
     } catch(err) {
       console.error("Upload error:", err);
       setUploadState("error");
@@ -773,12 +781,7 @@ export default function App() {
           <div>
             <div style={{fontSize:11,fontWeight:700,letterSpacing:3,color:"#ff6b2b"}}>ME2.8 DRIFT ANALYZER</div>
             <div style={{fontSize:8,color:"#909090",letterSpacing:2}}>v2 · ZWEI-DATEI-VERGLEICH · KFZ DIETRICH</div>
-          <div style={{fontSize:7,color:"#a0a0a0",marginTop:6,letterSpacing:1,textAlign:"center",borderTop:"1px solid #2a2a2a",paddingTop:6}}>
-            NUR FÜR DEN INTERNEN GEBRAUCH · KEIN ÖFFENTLICHES ANGEBOT · KEINE GEWÄHRLEISTUNG
-          </div>
-          <div style={{fontSize:7,color:"#909090",marginTop:3,textAlign:"center"}}>
-            Betreiber: KFZ Dietrich · Hardegsen-Gladebeck · nils@kfz-dietrich.de · © 2026 Alle Rechte vorbehalten
-          </div>
+
           </div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
