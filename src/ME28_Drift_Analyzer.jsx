@@ -219,7 +219,7 @@ const LANGS = {
 
 const DEFAULT_LANG = "DE";
 
-const COLLECTOR_URL = "https://script.google.com/macros/s/AKfycbwQ_s9Q_l5stIwY6ZUx6rPWqqgP9swdawP_NgXTtKEecR39Nis45BpzM_fZi5IssM-i/exec";
+const COLLECTOR_URL = "https://script.google.com/macros/s/AKfycbyeX6eYd2LnOTuY2VjizVjR4MGKq2FEwhQ_Ds8WBKRPb-LctPHqt0g532JfHph9KLVH/exec";
 
 const PARAMS = [
   // ── NMAX ── ME2.8: addr+nmaxShift | ME2.8.1: addr281 direkt
