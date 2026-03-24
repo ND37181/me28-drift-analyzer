@@ -53,7 +53,167 @@ const REGIONS = [
 const RISK_LABEL = { drift:"DRIFT", timing:"TIMING", medium:"KENNFELD", low:"NEBEN", code:"CODE", mirror:"MIRROR", info:"INFO" };
 const RISK_COLOR = { drift:"#ff3c3c", timing:"#fbbf24", medium:"#f59e0b", low:"#555", code:"#444", mirror:"#333", info:"#60a5fa" };
 
-const COLLECTOR_URL = "https://script.google.com/macros/s/AKfycbwuuzS1RR9JF8p8YvR6K0mLEGbPAuTfHOE41HgWlbirt2jukMPWw7C0dMV8KT8F25BD/exec";
+
+// ═══════════════════════════════════════════════════════════════
+// INTERNATIONALISIERUNG (i18n)
+// ═══════════════════════════════════════════════════════════════
+
+const LANGS = {
+  DE: {
+    title:          "ME2.8 / ME2.8.1 DRIFT ANALYZER",
+    subtitle:       "Bosch ME2.8 · M113 · M113K · Echtzeit-Analyse",
+    tuneLabel:      "TUNE / PRÜFLING",
+    refLabel:       "REFERENZ / VERGLEICH",
+    dropHint:       ".bin / .FLS / 512KB",
+    btnAnalyze:     "ANALYSIEREN",
+    btnClear:       "ZURÜCKSETZEN",
+    loading:        "Analysiere...",
+    tabOverview:    "ÜBERSICHT",
+    tabParams:      "PARAMETER",
+    tabMaps:        "KENNFELDER",
+    tabDiff:        "DIFF",
+    scoreLabel:     "QUALITÄTS-SCORE",
+    scorePassing:   "Drift-tauglich",
+    scoreFailing:   "Nacharbeit nötig",
+    catNMAX:        "NMAX HARD-LIMITER",
+    catSOFT:        "SOFT-LIMITER",
+    catVMAX:        "GESCHW.-BEGRENZER",
+    catSAS:         "SCHUBABSCHALTUNG",
+    catATF:         "WANDLERSCHUTZ",
+    catASR:         "ASR TEMPERATUR",
+    catSAFE:        "🔒 SICHERHEITSFUNKTIONEN (nicht ändern)",
+    catEGR:         "ABGASRUECKFUEHRUNG",
+    catCAN_ASR:     "CAN-ASR DREHMOMENTTABELLEN",
+    catSAFE_MAP:    "🔒 SICHERHEITS-KENNFELDER (nicht ändern)",
+    catIGN:         "ZUENDWINKEL",
+    statusOk:       "OK",
+    statusBad:      "FEHLER",
+    statusStock:    "STOCK",
+    mirrorOk:       "Mirror ✓",
+    mirrorBad:      "Mirror ✗",
+    exportJSON:     "JSON Export",
+    exportJSONd:    "Maschinenlesbar / alle Werte / fuer Weiterverarbeitung",
+    exportTXT:      "Text Protokoll",
+    exportTXTd:     "Druckbares Pruefprotokoll / plain text",
+    collectTitle:   "📂 DATEI ZUR WEITERENTWICKLUNG BEITRAGEN",
+    collectDesc:    "Durch Klick auf 'Jetzt beitragen' stimmst du zu, dass diese Flash-Datei samt Analyseergebnis anonym zur Weiterentwicklung des ME2.8 Drift Analyzers gespeichert wird. Betreiber: KFZ Dietrich, Hardegsen-Gladebeck. Die Datei wird ausschließlich für interne Forschungszwecke verwendet.",
+    collectBtn:     "✓ JETZT BEITRAGEN",
+    collectSending: "⏳ Wird übertragen...",
+    collectDone:    "✓ Erfolgreich gespeichert — Danke!",
+    collectError:   "✗ Fehler beim Übertragen. Bitte später erneut versuchen.",
+    collectDupe:    "⚠ Diese Datei ist bereits in der Sammlung vorhanden.",
+    errSize:        "Ungültige Dateigröße",
+    errExpected:    "erwartet 524288",
+    footerInternal: "NUR FÜR DEN INTERNEN GEBRAUCH · KEIN ÖFFENTLICHES ANGEBOT · KEINE GEWÄHRLEISTUNG",
+    footerBetreiber:"Betreiber: KFZ Dietrich · Hardegsen-Gladebeck · nils@kfz-dietrich.de · © 2026 Alle Rechte vorbehalten",
+    sollLabel:      "Soll:",
+    rangeLabel:     "Bereich:",
+  },
+  EN: {
+    title:          "ME2.8 / ME2.8.1 DRIFT ANALYZER",
+    subtitle:       "Bosch ME2.8 · M113 · M113K · Real-Time Analysis",
+    tuneLabel:      "TUNE / TARGET FILE",
+    refLabel:       "REFERENCE / COMPARE",
+    dropHint:       ".bin / .FLS / 512KB",
+    btnAnalyze:     "ANALYZE",
+    btnClear:       "RESET",
+    loading:        "Analyzing...",
+    tabOverview:    "OVERVIEW",
+    tabParams:      "PARAMETERS",
+    tabMaps:        "MAPS",
+    tabDiff:        "DIFF",
+    scoreLabel:     "QUALITY SCORE",
+    scorePassing:   "Drift-ready",
+    scoreFailing:   "Rework needed",
+    catNMAX:        "NMAX HARD-LIMITER",
+    catSOFT:        "SOFT-LIMITER",
+    catVMAX:        "SPEED LIMITER",
+    catSAS:         "OVERRUN CUTOFF",
+    catATF:         "TORQUE CONVERTER",
+    catASR:         "ASR TEMPERATURE",
+    catSAFE:        "🔒 SAFETY FUNCTIONS (do not modify)",
+    catEGR:         "EXHAUST GAS RECIRCULATION",
+    catCAN_ASR:     "CAN-ASR TORQUE TABLES",
+    catSAFE_MAP:    "🔒 SAFETY MAPS (do not modify)",
+    catIGN:         "IGNITION TIMING",
+    statusOk:       "OK",
+    statusBad:      "ERROR",
+    statusStock:    "STOCK",
+    mirrorOk:       "Mirror ✓",
+    mirrorBad:      "Mirror ✗",
+    exportJSON:     "JSON Export",
+    exportJSONd:    "Machine-readable / all values / for further processing",
+    exportTXT:      "Text Report",
+    exportTXTd:     "Printable inspection report / plain text",
+    collectTitle:   "📂 CONTRIBUTE FILE TO COLLECTION",
+    collectDesc:    "By clicking 'Contribute now' you agree that this flash file and its analysis result will be stored anonymously for the development of the ME2.8 Drift Analyzer. Operator: KFZ Dietrich, Hardegsen-Gladebeck. The file will be used exclusively for internal research purposes.",
+    collectBtn:     "✓ CONTRIBUTE NOW",
+    collectSending: "⏳ Uploading...",
+    collectDone:    "✓ Saved successfully — Thank you!",
+    collectError:   "✗ Upload failed. Please try again later.",
+    collectDupe:    "⚠ This file is already in the collection.",
+    errSize:        "Invalid file size",
+    errExpected:    "expected 524288",
+    footerInternal: "FOR INTERNAL USE ONLY · NOT A PUBLIC OFFERING · NO WARRANTY",
+    footerBetreiber:"Operator: KFZ Dietrich · Hardegsen-Gladebeck · nils@kfz-dietrich.de · © 2026 All rights reserved",
+    sollLabel:      "Target:",
+    rangeLabel:     "Range:",
+  },
+  FR: {
+    title:          "ME2.8 / ME2.8.1 DRIFT ANALYZER",
+    subtitle:       "Bosch ME2.8 · M113 · M113K · Analyse en temps réel",
+    tuneLabel:      "FICHIER TUNE / CIBLE",
+    refLabel:       "RÉFÉRENCE / COMPARAISON",
+    dropHint:       ".bin / .FLS / 512KB",
+    btnAnalyze:     "ANALYSER",
+    btnClear:       "RÉINITIALISER",
+    loading:        "Analyse en cours...",
+    tabOverview:    "APERÇU",
+    tabParams:      "PARAMÈTRES",
+    tabMaps:        "CARTOGRAPHIES",
+    tabDiff:        "DIFF",
+    scoreLabel:     "SCORE QUALITÉ",
+    scorePassing:   "Prêt pour le drift",
+    scoreFailing:   "Révision nécessaire",
+    catNMAX:        "LIMITEUR NMAX",
+    catSOFT:        "LIMITEUR SOUPLE",
+    catVMAX:        "LIMITEUR DE VITESSE",
+    catSAS:         "COUPURE EN DÉCÉLÉRATION",
+    catATF:         "PROTECTION CONVERTISSEUR",
+    catASR:         "TEMPÉRATURE ASR",
+    catSAFE:        "🔒 FONCTIONS DE SÉCURITÉ (ne pas modifier)",
+    catEGR:         "RECIRCULATION DES GAZ",
+    catCAN_ASR:     "TABLES COUPLE CAN-ASR",
+    catSAFE_MAP:    "🔒 CARTOGRAPHIES DE SÉCURITÉ (ne pas modifier)",
+    catIGN:         "AVANCE À L'ALLUMAGE",
+    statusOk:       "OK",
+    statusBad:      "ERREUR",
+    statusStock:    "STOCK",
+    mirrorOk:       "Miroir ✓",
+    mirrorBad:      "Miroir ✗",
+    exportJSON:     "Export JSON",
+    exportJSONd:    "Lisible par machine / toutes valeurs",
+    exportTXT:      "Rapport texte",
+    exportTXTd:     "Rapport d'inspection imprimable",
+    collectTitle:   "📂 CONTRIBUER LE FICHIER À LA COLLECTION",
+    collectDesc:    "En cliquant sur 'Contribuer', vous acceptez que ce fichier flash soit stocké anonymement pour le développement de l'analyseur. Opérateur: KFZ Dietrich, Hardegsen-Gladebeck. Le fichier sera utilisé exclusivement à des fins de recherche interne.",
+    collectBtn:     "✓ CONTRIBUER",
+    collectSending: "⏳ Envoi en cours...",
+    collectDone:    "✓ Enregistré avec succès — Merci!",
+    collectError:   "✗ Échec de l'envoi. Réessayez plus tard.",
+    collectDupe:    "⚠ Ce fichier est déjà dans la collection.",
+    errSize:        "Taille de fichier invalide",
+    errExpected:    "attendu 524288",
+    footerInternal: "USAGE INTERNE UNIQUEMENT · PAS D'OFFRE PUBLIQUE · SANS GARANTIE",
+    footerBetreiber:"Opérateur: KFZ Dietrich · Hardegsen-Gladebeck · nils@kfz-dietrich.de · © 2026 Tous droits réservés",
+    sollLabel:      "Cible:",
+    rangeLabel:     "Plage:",
+  },
+};
+
+const DEFAULT_LANG = "DE";
+
+const COLLECTOR_URL = "https://script.google.com/macros/s/AKfycbx9aZAkBHfnfUSh0a7R1qenPdHYizrlEkx9i4Gep6Kng_oI0bVgTiVrcXLtLqeZN34/exec";
 
 const PARAMS = [
   // ── NMAX ── ME2.8: addr+nmaxShift | ME2.8.1: addr281 direkt
@@ -347,7 +507,7 @@ function buildExportText(an, tuneName, refName) {
     "  Teilenr.: "+(an.partNr||"-"),
     "","SCORE: "+an.score+"%","",
     "MIRROR","  P<>M1: "+an.mirror.d12+"B  P<>M2: "+an.mirror.d13+"B  "+( an.mirror.ok?"OK":"KORRUPT!"),
-    "","PARAMETER",
+    "",T.tabParams,
     ...an.params.filter(p=>p.result.valid).map(p=>{
       const r=p.result;
       const v=r.value===0xFFFF?"0xFFFF":String(r.value);
@@ -355,7 +515,7 @@ function buildExportText(an, tuneName, refName) {
       const st=r.status==="ok"?"OK":r.status==="stock"?"STOCK":"FEHLER";
       return "  ["+st+"] "+p.label.padEnd(12)+" "+v.padEnd(8)+p.unit+rf+(!r.mirrorOk?" [MIRROR!]":"");
     }),
-    "","KENNFELDER",
+    "",T.tabMaps,
     ...an.maps.filter(m=>m.result.valid).map(m=>"  ["+(m.result.status==="ok"?"OK":"FEHLER")+"] "+m.label.padEnd(12)+" "+m.result.detail),
     "",
     ...(an.diff?[
@@ -477,7 +637,7 @@ function PRow({p}) {
       <span style={{fontFamily:"monospace",color:vc}}>{v}<span style={{color:"#666666",fontSize:8}}> {p.unit}</span>{r.note&&<span style={{color:"#909090",fontSize:8}}> {r.note}</span>}{isSafe&&p.safe_note&&<div style={{fontSize:7,color:"#8a7000",marginTop:1}}>{p.safe_note}</div>}</span>
       {rv?<span style={{color:"#666666",fontSize:9}}>Ref:{rv}</span>:<span/>}
       {delta!==null&&delta!==0?<span style={{color:delta>0?"#00ff88":"#ff3c3c",fontSize:9}}>{delta>0?"+":""}{delta}</span>:<span/>}
-      <span style={{color:"#585858",fontSize:9}}>{isSafe?`Bereich:${p.safe_range[0]}-${p.safe_range[1]}`:`Soll:${p.drift_soll===0xFFFF?"0xFFFF":p.drift_soll}`}</span>
+      <span style={{color:"#585858",fontSize:9}}>{isSafe?`Bereich:${p.safe_range[0]}-${p.safe_range[1]}`:`${isSafe?T.rangeLabel:T.sollLabel}${isSafe?p.safe_range[0]+"-"+p.safe_range[1]:(p.drift_soll===0xFFFF?"0xFFFF":p.drift_soll)}`}</span>
       <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:3}}>
         <Badge status={r.status}/><MDot ok={r.mirrorOk}/>
       </div>
@@ -485,23 +645,26 @@ function PRow({p}) {
   );
 }
 
-const CAT_DEFS = {
-  NMAX:{label:"NMAX HARD-LIMITER",color:"#ff6b2b"},
-  SOFT:{label:"SOFT-LIMITER",color:"#f59e0b"},
-  VMAX:{label:"GESCHW.-BEGRENZER",color:"#a78bfa"},
-  SAS:{label:"SCHUBABSCHALTUNG",color:"#34d399"},
-  ATF:{label:"WANDLERSCHUTZ",color:"#60a5fa"},
-  ASR:{label:"ASR TEMPERATUR",color:"#f472b6"},
-  SAFE:{label:"🔒 SICHERHEITSFUNKTIONEN (nicht ändern)",color:"#c8a000"},
-};
-const MAP_CAT_DEFS = {
-  EGR:{label:"ABGASRUECKFUEHRUNG",color:"#94a3b8"},
-  CAN_ASR:{label:"CAN-ASR DREHMOMENTTABELLEN",color:"#ff3c3c"},
-  SAFE_MAP:{label:"🔒 SICHERHEITS-KENNFELDER (nicht ändern)",color:"#c8a000"},
-  IGN:{label:"ZUENDWINKEL-KENNFELDER",color:"#fbbf24"},
-};
+const CAT_DEFS_FN = (T) => ({
+  NMAX:{label:T.catNMAX,color:"#ff6b2b"},
+  SOFT:{label:T.catSOFT,color:"#f59e0b"},
+  VMAX:{label:T.catVMAX,color:"#a78bfa"},
+  SAS:{label:T.catSAS,color:"#34d399"},
+  ATF:{label:T.catATF,color:"#60a5fa"},
+  ASR:{label:T.catASR,color:"#f472b6"},
+  SAFE:{label:T.catSAFE,color:"#c8a000"},
+});
+const MAP_CAT_DEFS_FN = (T) => ({
+  EGR:{label:T.catEGR,color:"#94a3b8"},
+  CAN_ASR:{label:T.catCAN_ASR,color:"#ff3c3c"},
+  SAFE_MAP:{label:T.catSAFE_MAP,color:"#c8a000"},
+  IGN:{label:T.catIGN,color:"#fbbf24"},
+});
 
 export default function App() {
+  const [lang,setLang]=useState(()=>localStorage.getItem("me28_lang")||DEFAULT_LANG);
+  const T = LANGS[lang] || LANGS[DEFAULT_LANG];
+  const changeLang = (l) => { setLang(l); localStorage.setItem("me28_lang",l); };
   const [tuneFile,setTuneFile]=useState(null);
   const [refFile,setRefFile]=useState(null);
   const [tuneBuf,setTuneBuf]=useState(null);
@@ -609,10 +772,28 @@ export default function App() {
           </div>
           </div>
         </div>
-        {analysis&&<button onClick={reset} style={{background:"transparent",border:"1px solid #1a1a1a",
-          color:"#686868",padding:"4px 12px",borderRadius:4,cursor:"pointer",fontSize:9,letterSpacing:1,fontFamily:"monospace"}}>
-          RESET
-        </button>}
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          {/* Sprach-Switcher */}
+          <div style={{display:"flex",gap:3}}>
+            {Object.keys(LANGS).map(l=>(
+              <button key={l} onClick={()=>changeLang(l)}
+                style={{background:lang===l?"#ff6b2b22":"transparent",
+                  border:"1px solid "+(lang===l?"#ff6b2b66":"#1e1e1e"),
+                  color:lang===l?"#ff6b2b":"#505050",
+                  padding:"3px 7px",borderRadius:3,cursor:"pointer",
+                  fontSize:8,letterSpacing:1,fontFamily:"monospace",
+                  fontWeight:lang===l?"700":"400"}}>
+                {l}
+              </button>
+            ))}
+          </div>
+          {analysis&&<button onClick={reset}
+            style={{background:"transparent",border:"1px solid #1a1a1a",
+            color:"#686868",padding:"4px 12px",borderRadius:4,cursor:"pointer",
+            fontSize:9,letterSpacing:1,fontFamily:"monospace"}}>
+            {T.btnClear}
+          </button>}
+        </div>
       </div>
 
       <div style={{maxWidth:1100,margin:"0 auto",padding:"18px 22px"}}>
@@ -621,13 +802,13 @@ export default function App() {
         {!analysis&&(
           <div style={{marginBottom:18}}>
             <div style={{display:"flex",gap:10,marginBottom:10}}>
-              <DropZone label="TUNE / PRUEFLING" onFile={f=>load(f,false)} file={tuneFile} color="#ff6b2b" icon="⚙"/>
-              <DropZone label="REFERENZ (optional)" onFile={f=>load(f,true)} file={refFile} color="#60a5fa" icon="📋"/>
+              <DropZone label={T.tuneLabel} onFile={f=>load(f,false)} file={tuneFile} color="#ff6b2b" icon="⚙"/>
+              <DropZone label={T.refLabel} onFile={f=>load(f,true)} file={refFile} color="#60a5fa" icon="📋"/>
             </div>
             {tuneBuf&&(
               <button onClick={analyze} style={{width:"100%",background:"#ff6b2b",border:"none",color:"#000",
                 padding:"10px",borderRadius:6,cursor:"pointer",fontSize:11,fontFamily:"monospace",letterSpacing:3,fontWeight:700}}>
-                ANALYSIEREN{refBuf?" (mit Referenz-Vergleich)":""}
+                {T.btnAnalyze}{refBuf?" (mit Referenz-Vergleich)":""}
               </button>
             )}
           </div>
@@ -711,7 +892,7 @@ export default function App() {
           {/* OVERVIEW */}
           {tab==="overview"&&(
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
-              {Object.entries(CAT_DEFS).map(([cat,{label,color}])=>{
+              {Object.entries(CAT_DEFS_FN(T)).map(([cat,{label,color}])=>{
                 const ps=analysis.params.filter(p=>p.cat===cat&&p.result.valid);
                 if(!ps.length)return null;
                 const ok=ps.filter(p=>p.result.status==="ok").length;
@@ -731,7 +912,7 @@ export default function App() {
                   </div>
                 );
               })}
-              {Object.entries(MAP_CAT_DEFS).map(([cat,{label,color}])=>{
+              {Object.entries(MAP_CAT_DEFS_FN(T)).map(([cat,{label,color}])=>{
                 const ms=analysis.maps.filter(m=>m.cat===cat&&m.result.valid);
                 if(!ms.length)return null;
                 const ok=ms.filter(m=>m.result.status==="ok").length;
@@ -756,7 +937,7 @@ export default function App() {
           )}
 
           {/* PARAMS */}
-          {tab==="params"&&Object.entries(CAT_DEFS).map(([cat,{label,color}])=>{
+          {tab==="params"&&Object.entries(CAT_DEFS_FN(T)).map(([cat,{label,color}])=>{
             const ps=analysis.params.filter(p=>p.cat===cat&&p.result.valid);
             if(!ps.length)return null;
             return(
@@ -768,7 +949,7 @@ export default function App() {
           })}
 
           {/* KENNFELDER */}
-          {tab==="kennfelder"&&Object.entries(MAP_CAT_DEFS).map(([cat,{label,color}])=>{
+          {tab==="kennfelder"&&Object.entries(MAP_CAT_DEFS_FN(T)).map(([cat,{label,color}])=>{
             const ms=analysis.maps.filter(m=>m.cat===cat&&m.result.valid);
             if(!ms.length)return null;
             return(
@@ -861,10 +1042,7 @@ export default function App() {
                   📂 DATEI ZUR WEITERENTWICKLUNG BEITRAGEN
                 </div>
                 <div style={{fontSize:8,color:"#909090",marginBottom:8,lineHeight:1.5}}>
-                  Durch Klick auf "Jetzt beitragen" stimmst du zu, dass diese Flash-Datei
-                  samt Analyseergebnis anonym zur Weiterentwicklung des ME2.8 Drift Analyzers
-                  gespeichert wird. Betreiber: KFZ Dietrich, Hardegsen-Gladebeck.
-                  Die Datei wird ausschließlich für interne Forschungszwecke verwendet.
+                  {T.collectDesc}
                 </div>
                 {(uploadState===null)&&(
                   <button onClick={()=>uploadToCollection()}
@@ -890,9 +1068,9 @@ export default function App() {
 
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
                 {[
-                  {t:"JSON Export",i:"{}",d:"Maschinenlesbar / alle Werte / fuer Weiterverarbeitung",
+                  {t:T.exportJSON,i:"{}",d:T.exportJSONd,
                     fn:()=>downloadFile(buildExportJSON(analysis,tuneFile?.name,refFile?.name),"ME28_"+tuneFile?.name?.replace(/\.[^.]+$/,"")+"_Score"+Math.round(analysis.score)+"pct.json","application/json")},
-                  {t:"Text Protokoll",i:"=",d:"Druckbares Pruefprotokoll / plain text",
+                  {t:T.exportTXT,i:"=",d:T.exportTXTd,
                     fn:()=>downloadFile(buildExportText(analysis,tuneFile?.name,refFile?.name),"ME28_Protokoll_"+tuneFile?.name?.replace(/\.[^.]+$/,"")+"_Score"+Math.round(analysis.score)+"pct.txt","text/plain")},
                 ].map(({t,i,d,fn})=>(
                   <div key={t} style={{background:"#0b0b0b",border:"1px solid #181818",borderRadius:8,padding:18,textAlign:"center"}}>
