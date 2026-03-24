@@ -230,16 +230,16 @@ const PARAMS = [
   { id:"NMAXR",     addr:0x12DCA, addr281:0x12B66, addr8862:0x12FD6, size:2, cat:"NMAX", label:"NMAXR",     unit:"rpm",  drift_soll:6600, soll281:0xFFFF, stock_range:[80,200],   nmaxParam:true },
   { id:"NMAXWF",    addr:0x12DDC, addr281:0x12B78, addr8862:0x12FE8, size:2, cat:"NMAX", label:"NMAXWF",    unit:"rpm",  drift_soll:6500, soll281:0xFFFF, stock_range:[60,120],   nmaxParam:true },
   // ── Soft-Limiter ── ME2.8: 0x16B0x | ME2.8.1: 0x14Bxx
-  { id:"FWNMAXWF",  addr:0x16B06, addr281:0x14B6C, addr8862:0x157BC, size:2, cat:"SOFT", label:"FWNMAXWF",  unit:"rpm",  drift_soll:6500, soll281:0xFFFF, stock_range:[4000,5200] },
-  { id:"FWNTOEL",   addr:0x16B08, addr281:0x14B6E, addr8862:0x157BE, size:2, cat:"SOFT", label:"FWNTOEL",   unit:"rpm",  drift_soll:6500, soll281:0xFFFF, stock_range:[4000,5200] },
-  { id:"FWTNMAXK",  addr:0x16B12, addr281:0x14B78, addr8862:0x157C8, size:2, cat:"SOFT", label:"FWTNMAXK",  unit:"ms",   drift_soll:200,  soll281:0xFFFF, stock_range:[1000,5000] },
-  { id:"FWTRAMP",   addr:0x16B14, addr281:0x14B7A, addr8862:0x157CA, size:2, cat:"SOFT", label:"FWTRAMP",   unit:"ms",   drift_soll:200,  soll281:0xFFFF, stock_range:[1000,5000] },
+  { id:"FWNMAXWF",  addr:0x16B06, addr281:0x14B6C, addr8862:0x157BC, size:2, cat:"SOFT", label:"FWNMAXWF",  unit:"rpm",  drift_soll:6500, soll281:0xFFFF, stock_range:[4000,5200], drift_ok_range:[5800,7000] },
+  { id:"FWNTOEL",   addr:0x16B08, addr281:0x14B6E, addr8862:0x157BE, size:2, cat:"SOFT", label:"FWNTOEL",   unit:"rpm",  drift_soll:6500, soll281:0xFFFF, stock_range:[4000,5200], drift_ok_range:[5800,7000] },
+  { id:"FWTNMAXK",  addr:0x16B12, addr281:0x14B78, addr8862:0x157C8, size:2, cat:"SOFT", label:"FWTNMAXK",  unit:"ms",   drift_soll:200,  soll281:0xFFFF, stock_range:[1000,5000], drift_ok_range:[100,600] },
+  { id:"FWTRAMP",   addr:0x16B14, addr281:0x14B7A, addr8862:0x157CA, size:2, cat:"SOFT", label:"FWTRAMP",   unit:"ms",   drift_soll:200,  soll281:0xFFFF, stock_range:[1000,5000], drift_ok_range:[100,600] },
   { id:"FWVMAXD",   addr:0x16B16, addr281:0x14B7C, addr8862:0x157CC, size:2, cat:"SOFT", label:"FWVMAXD",   unit:"",     drift_soll:0,    soll281:0xFFFF, stock_range:[1,9999] },
   { id:"FWVMAXR",   addr:0x16B18, addr281:0x14B80, addr8862:0x157CE, size:2, cat:"SOFT", label:"FWVMAXR",   unit:"",     drift_soll:0,    soll281:0xFFFF, stock_range:[1,9999] },
-  { id:"FWWNMAXD",  addr:0x16B1A, addr281:0x14B82, addr8862:0x157D0, size:2, cat:"SOFT", label:"FWWNMAXD",  unit:"rpm",  drift_soll:6400, soll281:0xFFFF, stock_range:[4000,5500] },
-  { id:"FWWNMAXKA", addr:0x16B1C, addr281:0x14B84, addr8862:0x157D2, size:2, cat:"SOFT", label:"FWWNMAXKA", unit:"rpm",  drift_soll:6600, soll281:0xFFFF, stock_range:[4000,5500] },
-  { id:"FWWNMAXKH", addr:0x16B1E, addr281:0x14B86, addr8862:0x157D4, size:2, cat:"SOFT", label:"FWWNMAXKH", unit:"rpm",  drift_soll:6600, soll281:0xFFFF, stock_range:[4000,5500] },
-  { id:"FWWNMAXR",  addr:0x16B20, addr281:0x14B88, addr8862:0x157D6, size:2, cat:"SOFT", label:"FWWNMAXR",  unit:"rpm",  drift_soll:6200, soll281:0xFFFF, stock_range:[4000,5500] },
+  { id:"FWWNMAXD",  addr:0x16B1A, addr281:0x14B82, addr8862:0x157D0, size:2, cat:"SOFT", label:"FWWNMAXD",  unit:"rpm",  drift_soll:6400, soll281:0xFFFF, stock_range:[4000,5500], drift_ok_range:[5800,6600] },
+  { id:"FWWNMAXKA", addr:0x16B1C, addr281:0x14B84, addr8862:0x157D2, size:2, cat:"SOFT", label:"FWWNMAXKA", unit:"rpm",  drift_soll:6600, soll281:0xFFFF, stock_range:[4000,5500], drift_ok_range:[6000,7000] },
+  { id:"FWWNMAXKH", addr:0x16B1E, addr281:0x14B86, addr8862:0x157D4, size:2, cat:"SOFT", label:"FWWNMAXKH", unit:"rpm",  drift_soll:6600, soll281:0xFFFF, stock_range:[4000,5500], drift_ok_range:[6000,7000] },
+  { id:"FWWNMAXR",  addr:0x16B20, addr281:0x14B88, addr8862:0x157D6, size:2, cat:"SOFT", label:"FWWNMAXR",  unit:"rpm",  drift_soll:6200, soll281:0xFFFF, stock_range:[4000,5500], drift_ok_range:[5500,6500] },
   { id:"KLAMDRED",  addr:0x16B22, addr281:0x14B8A, addr8862:0x157D8, size:2, cat:"SOFT", label:"KLAMDRED",  unit:"",     drift_soll:0,    soll281:0,      stock_range:[1,9999] },
   // VMAXOG: ME2.8 @ 0x16B32 | ME2.8.1 @ 0x14B9A
   ...Array.from({length:8},(_,i)=>({ id:"VMAXOG"+i, addr:0x16B32+i*2, addr281:0x14B9A+i*2, addr8862:0x157E8+i*2, size:2, cat:"SOFT", label:"VMAXOG["+i+"]", unit:"", drift_soll:0xFFFF, soll281:0xFFFF, stock_range:[0,5000] })),
@@ -397,13 +397,16 @@ function analyzeParam(buf, p, shift, ref, nmaxShift, is281, sw) {
             status:inRange?"ok":"bad", soll:null, refValue, note:phys, usedShift};
   }
 
-  const isDriftOk = value===soll || isDisabled || isHighSpeed || isFwvmaxOff;
+  // drift_ok_range: funktionale Drift-Werte die kein 0xFFFF sein müssen
+  const inDriftRange = p.drift_ok_range && value>=p.drift_ok_range[0] && value<=p.drift_ok_range[1];
+  const isDriftOk = value===soll || isDisabled || isHighSpeed || isFwvmaxOff || inDriftRange;
   const isStock   = !isDriftOk && value>=p.stock_range[0] && value<=p.stock_range[1];
   const status    = isDriftOk?"ok" : isStock?"stock" : "bad";
 
   let note = null;
-  if (isDisabled)   note = "0xFFFF=deaktiviert";
+  if (isDisabled)       note = "0xFFFF=deaktiviert";
   else if (isHighSpeed) note = `${(value*0.1).toFixed(0)}km/h`;
+  else if (inDriftRange) note = `${value} rpm ✓`;
   else if (isFwvmaxOff) note = "0xFF=306km/h=aus";
   else if (p.id==="TMASR" && is281) note = value===0?"NTC-Min=aus":"NTC-aktiv";
   else if (p.id==="FWVMAX" && is281 && !isFwvmaxOff) note = `${(value*306.122/255).toFixed(0)}km/h`;
