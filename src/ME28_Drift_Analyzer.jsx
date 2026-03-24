@@ -1039,7 +1039,7 @@ export default function App() {
               <div style={{marginBottom:14,padding:"10px 12px",background:"#0d1a0d",
                 border:"1px solid #1a3a1a",borderRadius:4}}>
                 <div style={{fontSize:9,color:"#00ff88",letterSpacing:2,marginBottom:6}}>
-                  📂 DATEI ZUR WEITERENTWICKLUNG BEITRAGEN
+                  {T.collectTitle}
                 </div>
                 <div style={{fontSize:8,color:"#909090",marginBottom:8,lineHeight:1.5}}>
                   {T.collectDesc}
@@ -1049,20 +1049,20 @@ export default function App() {
                     style={{background:"#003300",border:"1px solid #00ff88",color:"#00ff88",
                       padding:"5px 14px",fontSize:8,borderRadius:3,cursor:"pointer",
                       letterSpacing:1}}>
-                    ✓ JETZT BEITRAGEN
+                    {T.collectBtn}
                   </button>
                 )}
                 {uploadState==="uploading"&&(
-                  <div style={{fontSize:8,color:"#f59e0b"}}>⏳ Wird übertragen...</div>
+                  <div style={{fontSize:8,color:"#f59e0b"}}>{T.collectSending}</div>
                 )}
                 {uploadState==="done"&&(
-                  <div style={{fontSize:8,color:"#00ff88"}}>✓ Erfolgreich gespeichert — Danke!</div>
+                  <div style={{fontSize:8,color:"#00ff88"}}>{T.collectDone}</div>
                 )}
                 {uploadState==="error"&&(
-                  <div style={{fontSize:8,color:"#ff3c3c"}}>✗ Fehler beim Übertragen. Bitte später erneut versuchen.</div>
+                  <div style={{fontSize:8,color:"#ff3c3c"}}>{T.collectError}</div>
                 )}
                 {uploadState==="duplicate"&&(
-                  <div style={{fontSize:8,color:"#f59e0b"}}>⚠ Diese Datei ist bereits in der Sammlung vorhanden.</div>
+                  <div style={{fontSize:8,color:"#f59e0b"}}>{T.collectDupe}</div>
                 )}
               </div>
 
