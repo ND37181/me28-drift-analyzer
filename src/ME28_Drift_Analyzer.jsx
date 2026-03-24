@@ -650,8 +650,8 @@ export default function App() {
             {TABS.map(t=>(
               <button key={t} onClick={()=>setTab(t)} style={{background:"transparent",border:"none",
                 padding:"6px 14px",cursor:"pointer",fontSize:9,letterSpacing:2,fontFamily:"monospace",
-                color:tab===t?"#ff6b2b":"#2e2e2e",
-                borderBottom:tab===t?"2px solid #ff6b2b":"2px solid transparent",transition:"all 0.1s"}}>
+                color:tab===t?"#ff6b2b":"#888888",
+                borderBottom:tab===t?"2px solid #ff6b2b":"2px solid #333333",transition:"all 0.1s"}}>
                 {t==="diff"?"DIFF ("+analysis.diff.length+")":t.toUpperCase()}
               </button>
             ))}
