@@ -54,6 +54,11 @@ function doPost(e) {
       return respond(output, 413, "Datei zu groß");
     }
 
+    // Duplikatprüfung via SHA-256
+    if (data.sha256 && isDuplicate(data.sha256)) {
+      return respond(output, 409, "Datei bereits vorhanden", { sha256: data.sha256 });
+    }
+
     // Dateiname zusammenbauen: Datum_SW_ScoreXXpct_Originalname
     const timestamp = Utilities.formatDate(
       new Date(), "Europe/Berlin", "yyyy-MM-dd_HH-mm-ss"
@@ -80,6 +85,7 @@ function doPost(e) {
       score:            data.score,
       engine:           data.engine  || "unbekannt",
       mirrorOk:         data.mirrorOk || false,
+      sha256:           data.sha256  || "",
       analysisJson:     JSON.stringify(data.analysis || {}),
       fileId:           savedFile.getId(),
       fileUrl:          savedFile.getUrl(),
@@ -109,13 +115,14 @@ function logToSheets(meta) {
       sheet.appendRow([
         "Datum/Zeit", "Gespeicherter Dateiname", "Original-Dateiname",
         "SW-Variante", "Score (%)", "Motor",
-        "Mirror OK", "Analyse-JSON", "Drive-Datei-URL"
+        "Mirror OK", "SHA-256", "Analyse-JSON", "Drive-Datei-URL"
       ]);
-      sheet.getRange(1, 1, 1, 9).setFontWeight("bold");
+      sheet.getRange(1, 1, 1, 10).setFontWeight("bold");
       sheet.setFrozenRows(1);
       sheet.setColumnWidth(2, 280);
-      sheet.setColumnWidth(8, 400);
-      sheet.setColumnWidth(9, 300);
+      sheet.setColumnWidth(8, 220);
+      sheet.setColumnWidth(9, 400);
+      sheet.setColumnWidth(10, 300);
     }
 
     sheet.appendRow([
@@ -126,12 +133,34 @@ function logToSheets(meta) {
       meta.score,
       meta.engine,
       meta.mirrorOk ? "Ja" : "Nein",
+      meta.sha256,
       meta.analysisJson,
       meta.fileUrl,
     ]);
   } catch (err) {
     // Sheets-Fehler nicht werfen — Datei wurde trotzdem gespeichert
     console.log("Sheets-Log Fehler: " + err.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DUPLIKATPRÜFUNG — prüft SHA-256 gegen bestehende Einträge
+// ═══════════════════════════════════════════════════════════════
+
+function isDuplicate(sha256) {
+  try {
+    const ss    = SpreadsheetApp.openById(CONFIG.SHEETS_ID);
+    const sheet = ss.getSheetByName("Flash-Log");
+    if (!sheet) return false;
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return false;
+
+    // SHA-256 Spalte = Spalte 8
+    const hashes = sheet.getRange(2, 8, lastRow - 1, 1).getValues();
+    return hashes.some(row => row[0] === sha256);
+  } catch {
+    return false; // Im Zweifel: nicht als Duplikat werten
   }
 }
 

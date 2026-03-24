@@ -518,6 +518,11 @@ export default function App() {
     if (!tuneBuf || !analysis) return;
     setUploadState("uploading");
     try {
+      // SHA-256 Hash berechnen (Duplikatschutz)
+      const hashBuffer = await crypto.subtle.digest("SHA-256", tuneBuf);
+      const hashArray  = Array.from(new Uint8Array(hashBuffer));
+      const sha256     = hashArray.map(b => b.toString(16).padStart(2,"0")).join("");
+
       // Datei in Base64 konvertieren
       const bytes = new Uint8Array(tuneBuf);
       let binary = "";
@@ -527,6 +532,7 @@ export default function App() {
       const payload = {
         accepted:   true,
         file:       base64,
+        sha256:     sha256,
         filename:   tuneFile.name,
         sw:         analysis.sw.label,
         score:      analysis.score,
@@ -546,7 +552,9 @@ export default function App() {
         body:   JSON.stringify(payload),
       });
       const json = await res.json();
-      setUploadState(json.status === 200 ? "done" : "error");
+      if      (json.status === 200) setUploadState("done");
+      else if (json.status === 409) setUploadState("duplicate");
+      else                          setUploadState("error");
     } catch {
       setUploadState("error");
     }
@@ -858,7 +866,7 @@ export default function App() {
                   gespeichert wird. Betreiber: KFZ Dietrich, Hardegsen-Gladebeck.
                   Die Datei wird ausschließlich für interne Forschungszwecke verwendet.
                 </div>
-                {uploadState===null&&(
+                {(uploadState===null)&&(
                   <button onClick={()=>uploadToCollection()}
                     style={{background:"#003300",border:"1px solid #00ff88",color:"#00ff88",
                       padding:"5px 14px",fontSize:8,borderRadius:3,cursor:"pointer",
@@ -874,6 +882,9 @@ export default function App() {
                 )}
                 {uploadState==="error"&&(
                   <div style={{fontSize:8,color:"#ff3c3c"}}>✗ Fehler beim Übertragen. Bitte später erneut versuchen.</div>
+                )}
+                {uploadState==="duplicate"&&(
+                  <div style={{fontSize:8,color:"#f59e0b"}}>⚠ Diese Datei ist bereits in der Sammlung vorhanden.</div>
                 )}
               </div>
 
