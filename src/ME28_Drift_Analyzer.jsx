@@ -475,11 +475,14 @@ function runAnalysis(buf, ref) {
   const params = PARAMS.map(p=>({...p,result:analyzeParam(buf,p,shift,ref,nmaxShift,is281,sw)}));
   const maps   = MAPS.map(m=>({...m,result:analyzeMap(buf,m,shift,ref,is281,sw)}));
   const diff   = ref ? computeDiff(ref,buf) : null;
-  const okC    = params.filter(p=>p.result.status==="ok").length;
-  const badC   = params.filter(p=>p.result.status==="bad").length;
-  const mapOk  = maps.filter(m=>m.result.status==="ok").length;
-  const mapBad = maps.filter(m=>m.result.status==="bad").length;
-  const total  = params.filter(p=>p.result.valid).length + maps.filter(m=>m.result.valid).length;
+  // SAFE-Parameter nur als Monitor — nicht in Score einrechnen
+  const driftParams = params.filter(p=>p.cat!=="SAFE");
+  const driftMaps   = maps.filter(m=>m.cat!=="SAFE_MAP");
+  const okC    = driftParams.filter(p=>p.result.status==="ok").length;
+  const badC   = driftParams.filter(p=>p.result.status==="bad").length;
+  const mapOk  = driftMaps.filter(m=>m.result.status==="ok").length;
+  const mapBad = driftMaps.filter(m=>m.result.status==="bad").length;
+  const total  = driftParams.filter(p=>p.result.valid).length + driftMaps.filter(m=>m.result.valid).length;
   const score  = Math.round(((okC+mapOk)/total)*100);
   return {sw,partNr,mirror,params,maps,diff,score,okC,badC,mapOk,mapBad};
 }
