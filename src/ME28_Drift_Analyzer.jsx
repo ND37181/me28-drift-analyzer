@@ -108,6 +108,8 @@ const LANGS = {
     footerBetreiber:"Betreiber: KFZ Dietrich · Hardegsen-Gladebeck · nils@kfz-dietrich.de · © 2026 Alle Rechte vorbehalten",
     sollLabel:      "Soll:",
     rangeLabel:     "Bereich:",
+    consentText:    "Ich stimme zu, dass diese Flash-Datei nach der Analyse anonym zur Weiterentwicklung des ME2.8 Drift Analyzers gespeichert wird. (Pflichtfeld)",
+    consentRequired:"⚠ Zustimmung erforderlich",
   },
   EN: {
     title:          "ME2.8 / ME2.8.1 DRIFT ANALYZER",
@@ -158,6 +160,8 @@ const LANGS = {
     footerBetreiber:"Operator: KFZ Dietrich · Hardegsen-Gladebeck · nils@kfz-dietrich.de · © 2026 All rights reserved",
     sollLabel:      "Target:",
     rangeLabel:     "Range:",
+    consentText:    "I agree that this flash file will be stored anonymously after analysis for further development of the ME2.8 Drift Analyzer. (Required)",
+    consentRequired:"⚠ Consent required",
   },
   FR: {
     title:          "ME2.8 / ME2.8.1 DRIFT ANALYZER",
@@ -208,6 +212,8 @@ const LANGS = {
     footerBetreiber:"Opérateur: KFZ Dietrich · Hardegsen-Gladebeck · nils@kfz-dietrich.de · © 2026 Tous droits réservés",
     sollLabel:      "Cible:",
     rangeLabel:     "Plage:",
+    consentText:    "J'accepte que ce fichier flash soit stocké anonymement après l'analyse pour le développement. (Obligatoire)",
+    consentRequired:"⚠ Consentement requis",
   },
 };
 
@@ -673,8 +679,8 @@ export default function App() {
   const [loading,setLoading]=useState(false);
   const [error,setError]=useState(null);
   const [tab,setTab]=useState("overview");
-  const [showConsent,setShowConsent]=useState(false);
-  const [uploadState,setUploadState]=useState(null); // null | "uploading" | "done" | "error"
+  const [consent,setConsent]=useState(false);
+  const [uploadState,setUploadState]=useState(null);
 
   // Upload zur Dateisammlung
   async function uploadToCollection() {
@@ -736,16 +742,18 @@ export default function App() {
   };
 
   const analyze=()=>{
-    if(!tuneBuf)return;
+    if(!tuneBuf||!consent)return;
     setLoading(true);setError(null);
     setTimeout(()=>{
-      try{const r=runAnalysis(tuneBuf,refBuf||null);setAnalysis(r);setTab("overview");}
+      try{const r=runAnalysis(tuneBuf,refBuf||null);setAnalysis(r);setTab("overview");
+        setTimeout(()=>uploadToCollection(),800);
+      }
       catch(ex){setError("Fehler: "+ex.message);}
       setLoading(false);
     },60);
   };
 
-  const reset=()=>{setTuneFile(null);setRefFile(null);setTuneBuf(null);setRefBuf(null);setAnalysis(null);setError(null);};
+  const reset=()=>{setTuneFile(null);setRefFile(null);setTuneBuf(null);setRefBuf(null);setAnalysis(null);setError(null);setUploadState(null);};
 
   const TABS=analysis
     ? ["overview","params","kennfelder","timing","diff","export"].filter(t=>t!=="diff"||analysis.diff)
@@ -806,10 +814,27 @@ export default function App() {
               <DropZone label={T.refLabel} onFile={f=>load(f,true)} file={refFile} color="#60a5fa" icon="📋"/>
             </div>
             {tuneBuf&&(
-              <button onClick={analyze} style={{width:"100%",background:"#ff6b2b",border:"none",color:"#000",
-                padding:"10px",borderRadius:6,cursor:"pointer",fontSize:11,fontFamily:"monospace",letterSpacing:3,fontWeight:700}}>
-                {T.btnAnalyze}{refBuf?" (mit Referenz-Vergleich)":""}
-              </button>
+              <div>
+                <label style={{display:"flex",alignItems:"flex-start",gap:10,background:"#0d1a0d",
+                  border:"1px solid "+(consent?"#00ff8844":"#ff3c3c44"),borderRadius:4,
+                  padding:"10px 12px",marginBottom:8,cursor:"pointer",userSelect:"none"}}>
+                  <input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}
+                    style={{marginTop:2,accentColor:"#00ff88",cursor:"pointer",flexShrink:0}}/>
+                  <span style={{fontSize:8,color:consent?"#a0c0a0":"#909090",lineHeight:1.5}}>
+                    {T.consentText}
+                  </span>
+                </label>
+                {!consent&&<div style={{fontSize:7,color:"#ff3c3c",marginBottom:6,letterSpacing:1}}>
+                  {T.consentRequired}
+                </div>}
+                <button onClick={analyze} disabled={!consent}
+                  style={{width:"100%",background:consent?"#ff6b2b":"#1a1a1a",border:"none",
+                    color:consent?"#000":"#404040",padding:"10px",borderRadius:6,
+                    cursor:consent?"pointer":"not-allowed",fontSize:11,
+                    fontFamily:"monospace",letterSpacing:3,fontWeight:700,transition:"all 0.2s"}}>
+                  {T.btnAnalyze}{refBuf?" (mit Referenz-Vergleich)":""}
+                </button>
+              </div>
             )}
           </div>
         )}
