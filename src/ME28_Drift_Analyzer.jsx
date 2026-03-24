@@ -53,6 +53,8 @@ const REGIONS = [
 const RISK_LABEL = { drift:"DRIFT", timing:"TIMING", medium:"KENNFELD", low:"NEBEN", code:"CODE", mirror:"MIRROR", info:"INFO" };
 const RISK_COLOR = { drift:"#ff3c3c", timing:"#fbbf24", medium:"#f59e0b", low:"#555", code:"#444", mirror:"#333", info:"#60a5fa" };
 
+const COLLECTOR_URL = "https://script.google.com/macros/s/AKfycbwuuzS1RR9JF8p8YvR6K0mLEGbPAuTfHOE41HgWlbirt2jukMPWw7C0dMV8KT8F25BD/exec";
+
 const PARAMS = [
   // ── NMAX ── ME2.8: addr+nmaxShift | ME2.8.1: addr281 direkt
   { id:"NMAXAT",    addr:0x12DC2, addr281:0x12B5E, addr8862:0x12FCE, size:2, cat:"NMAX", label:"NMAXAT",    unit:"rpm",  drift_soll:6600, soll281:0xFFFF, stock_range:[100,300],  nmaxParam:true },
@@ -508,6 +510,47 @@ export default function App() {
   const [loading,setLoading]=useState(false);
   const [error,setError]=useState(null);
   const [tab,setTab]=useState("overview");
+  const [showConsent,setShowConsent]=useState(false);
+  const [uploadState,setUploadState]=useState(null); // null | "uploading" | "done" | "error"
+
+  // Upload zur Dateisammlung
+  async function uploadToCollection() {
+    if (!tuneBuf || !analysis) return;
+    setUploadState("uploading");
+    try {
+      // Datei in Base64 konvertieren
+      const bytes = new Uint8Array(tuneBuf);
+      let binary = "";
+      bytes.forEach(b => binary += String.fromCharCode(b));
+      const base64 = btoa(binary);
+
+      const payload = {
+        accepted:   true,
+        file:       base64,
+        filename:   tuneFile.name,
+        sw:         analysis.sw.label,
+        score:      analysis.score,
+        engine:     analysis.sw.engine,
+        mirrorOk:   analysis.mirror?.ok || false,
+        analysis:   {
+          score:    analysis.score,
+          sw:       analysis.sw.label,
+          partNr:   analysis.partNr,
+          okCount:  analysis.okCount,
+          badCount: analysis.badCount,
+        },
+      };
+
+      const res = await fetch(COLLECTOR_URL, {
+        method: "POST",
+        body:   JSON.stringify(payload),
+      });
+      const json = await res.json();
+      setUploadState(json.status === 200 ? "done" : "error");
+    } catch {
+      setUploadState("error");
+    }
+  }
 
   const load=(file,isRef)=>{
     if(!file)return;
@@ -516,7 +559,7 @@ export default function App() {
       const buf=new Uint8Array(e.target.result);
       if(buf.length!==524288){setError(file.name+": "+buf.length+"B -- erwartet 524288");return;}
       if(isRef){setRefFile(file);setRefBuf(buf);setAnalysis(null);}
-      else{setTuneFile(file);setTuneBuf(buf);setAnalysis(null);}
+      else{setTuneFile(file);setTuneBuf(buf);setAnalysis(null);setUploadState(null);}
     };
     rd.readAsArrayBuffer(file);
   };
@@ -802,6 +845,38 @@ export default function App() {
           {/* EXPORT */}
           {tab==="export"&&(
             <div>
+              
+              {/* ── Datei zur Sammlung beitragen ── */}
+              <div style={{marginBottom:14,padding:"10px 12px",background:"#0d1a0d",
+                border:"1px solid #1a3a1a",borderRadius:4}}>
+                <div style={{fontSize:9,color:"#00ff88",letterSpacing:2,marginBottom:6}}>
+                  📂 DATEI ZUR WEITERENTWICKLUNG BEITRAGEN
+                </div>
+                <div style={{fontSize:8,color:"#909090",marginBottom:8,lineHeight:1.5}}>
+                  Durch Klick auf "Jetzt beitragen" stimmst du zu, dass diese Flash-Datei
+                  samt Analyseergebnis anonym zur Weiterentwicklung des ME2.8 Drift Analyzers
+                  gespeichert wird. Betreiber: KFZ Dietrich, Hardegsen-Gladebeck.
+                  Die Datei wird ausschließlich für interne Forschungszwecke verwendet.
+                </div>
+                {uploadState===null&&(
+                  <button onClick={()=>uploadToCollection()}
+                    style={{background:"#003300",border:"1px solid #00ff88",color:"#00ff88",
+                      padding:"5px 14px",fontSize:8,borderRadius:3,cursor:"pointer",
+                      letterSpacing:1}}>
+                    ✓ JETZT BEITRAGEN
+                  </button>
+                )}
+                {uploadState==="uploading"&&(
+                  <div style={{fontSize:8,color:"#f59e0b"}}>⏳ Wird übertragen...</div>
+                )}
+                {uploadState==="done"&&(
+                  <div style={{fontSize:8,color:"#00ff88"}}>✓ Erfolgreich gespeichert — Danke!</div>
+                )}
+                {uploadState==="error"&&(
+                  <div style={{fontSize:8,color:"#ff3c3c"}}>✗ Fehler beim Übertragen. Bitte später erneut versuchen.</div>
+                )}
+              </div>
+
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
                 {[
                   {t:"JSON Export",i:"{}",d:"Maschinenlesbar / alle Werte / fuer Weiterverarbeitung",
