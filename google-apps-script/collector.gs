@@ -139,7 +139,13 @@ function logToSheets(meta) {
     ]);
   } catch (err) {
     // Sheets-Fehler nicht werfen — Datei wurde trotzdem gespeichert
-    console.log("Sheets-Log Fehler: " + err.message);
+    // Fehler in Drive-Datei loggen für Debugging
+    try {
+      const folder = DriveApp.getFolderById(CONFIG.DRIVE_FOLDER_ID);
+      folder.createFile("SHEETS_ERROR_"+new Date().getTime()+".txt", 
+        "Fehler: "+err.message+"
+Stack: "+err.stack, "text/plain");
+    } catch(e2) {}
   }
 }
 

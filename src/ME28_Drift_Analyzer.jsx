@@ -626,7 +626,7 @@ function DropZone({label,onFile,file,color,icon}) {
   );
 }
 
-function PRow({p}) {
+function PRow({p, T}) {
   const r=p.result;
   if(!r.valid) return null;
   const isSafe = p.cat==="SAFE";
@@ -723,7 +723,7 @@ export default function App() {
       await fetch(COLLECTOR_URL, {
         method:  "POST",
         mode:    "no-cors",
-        headers: {"Content-Type":"text/plain"},
+
         body:    JSON.stringify(payload),
       });
       // no-cors = opaque response, kein Status-Check möglich → immer "done"
@@ -978,7 +978,7 @@ export default function App() {
             return(
               <div key={cat} style={{border:"1px solid "+color+"22",borderLeft:"3px solid "+color,borderRadius:6,marginBottom:11}}>
                 <div style={{padding:"6px 11px",background:color+"10",fontSize:8,color,letterSpacing:2,fontWeight:700}}>{label}</div>
-                <div style={{padding:"6px 11px"}}>{ps.map(p=><PRow key={p.id} p={p}/>)}</div>
+                <div style={{padding:"6px 11px"}}>{ps.map(p=><PRow key={p.id} p={p} T={T}/>)}</div>
               </div>
             );
           })}
