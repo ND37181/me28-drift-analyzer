@@ -683,16 +683,16 @@ export default function App() {
   const [uploadState,setUploadState]=useState(null);
 
   // Upload zur Dateisammlung
-  async function uploadToCollection() {
-    if (!tuneBuf || !analysis) return;
+  async function uploadToCollection(result) {
+    // result direkt übergeben (state könnte noch null sein wegen React async)
+    const r = result || analysis;
+    if (!tuneBuf || !r) return;
     setUploadState("uploading");
     try {
-      // SHA-256 Hash berechnen (Duplikatschutz)
       const hashBuffer = await crypto.subtle.digest("SHA-256", tuneBuf);
-      const hashArray  = Array.from(new Uint8Array(hashBuffer));
-      const sha256     = hashArray.map(b => b.toString(16).padStart(2,"0")).join("");
+      const sha256     = Array.from(new Uint8Array(hashBuffer))
+                          .map(b=>b.toString(16).padStart(2,"0")).join("");
 
-      // Datei in Base64 konvertieren
       const bytes = new Uint8Array(tuneBuf);
       let binary = "";
       bytes.forEach(b => binary += String.fromCharCode(b));
@@ -703,16 +703,16 @@ export default function App() {
         file:       base64,
         sha256:     sha256,
         filename:   tuneFile.name,
-        sw:         analysis.sw.label,
-        score:      analysis.score,
-        engine:     analysis.sw.engine,
-        mirrorOk:   analysis.mirror?.ok || false,
+        sw:         r.sw.label,
+        score:      r.score,
+        engine:     r.sw.engine,
+        mirrorOk:   r.mirror?.ok || false,
         analysis:   {
-          score:    analysis.score,
-          sw:       analysis.sw.label,
-          partNr:   analysis.partNr,
-          okCount:  analysis.okCount,
-          badCount: analysis.badCount,
+          score:    r.score,
+          sw:       r.sw.label,
+          partNr:   r.partNr,
+          okCount:  r.okCount,
+          badCount: r.badCount,
         },
       };
 
@@ -724,7 +724,8 @@ export default function App() {
       if      (json.status === 200) setUploadState("done");
       else if (json.status === 409) setUploadState("duplicate");
       else                          setUploadState("error");
-    } catch {
+    } catch(err) {
+      console.error("Upload error:", err);
       setUploadState("error");
     }
   }
@@ -746,7 +747,7 @@ export default function App() {
     setLoading(true);setError(null);
     setTimeout(()=>{
       try{const r=runAnalysis(tuneBuf,refBuf||null);setAnalysis(r);setTab("overview");
-        setTimeout(()=>uploadToCollection(),800);
+        uploadToCollection(r);
       }
       catch(ex){setError("Fehler: "+ex.message);}
       setLoading(false);
@@ -909,7 +910,13 @@ export default function App() {
                 padding:"6px 14px",cursor:"pointer",fontSize:9,letterSpacing:2,fontFamily:"monospace",
                 color:tab===t?"#ff6b2b":"#888888",
                 borderBottom:tab===t?"2px solid #ff6b2b":"2px solid #333333",transition:"all 0.1s"}}>
-                {t==="diff"?"DIFF ("+analysis.diff.length+")":t.toUpperCase()}
+                {t==="diff"?"DIFF ("+analysis.diff.length+")":
+                  t==="overview"?T.tabOverview:
+                  t==="params"?T.tabParams:
+                  t==="kennfelder"?T.tabMaps:
+                  t==="timing"?"TIMING":
+                  t==="export"?"EXPORT":
+                  t.toUpperCase()}
               </button>
             ))}
           </div>
