@@ -1136,6 +1136,54 @@ export default function App() {
         </>)}
       </div>
 
+      {/* Footer + Impressum */}
+      <div style={{borderTop:"1px solid #141414",marginTop:32,padding:"18px 22px",
+        background:"#040404",fontSize:7,color:"#505050",lineHeight:2}}>
+        <div style={{maxWidth:1100,margin:"0 auto"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:20,marginBottom:12}}>
+
+            {/* Impressum */}
+            <div>
+              <div style={{fontSize:8,color:"#909090",letterSpacing:2,marginBottom:6}}>IMPRESSUM</div>
+              <div>KFZ Dietrich</div>
+              <div>Nils Dietrich</div>
+              <div>Hauptstraße 2</div>
+              <div>37181 Hardegsen-Gladebeck</div>
+              <div style={{marginTop:4}}>Tel: <a href="tel:+495505123456" style={{color:"#505050",textDecoration:"none"}}>auf Anfrage</a></div>
+              <div>E-Mail: <a href="mailto:nils@kfz-dietrich.de" style={{color:"#606060",textDecoration:"none"}}>nils@kfz-dietrich.de</a></div>
+            </div>
+
+            {/* Rechtliches */}
+            <div>
+              <div style={{fontSize:8,color:"#909090",letterSpacing:2,marginBottom:6}}>RECHTLICHES</div>
+              <div>Dieses Tool dient ausschließlich</div>
+              <div>dem internen Gebrauch von KFZ Dietrich.</div>
+              <div style={{marginTop:4}}>Kein öffentliches Angebot.</div>
+              <div>Keine Gewährleistung oder Haftung</div>
+              <div>für Schäden durch Fehlbedienung.</div>
+              <div style={{marginTop:4}}>© 2026 Nils Dietrich. Alle Rechte vorbehalten.</div>
+            </div>
+
+            {/* Datenschutz */}
+            <div>
+              <div style={{fontSize:8,color:"#909090",letterSpacing:2,marginBottom:6}}>DATENSCHUTZ</div>
+              <div>Analyse läuft vollständig lokal</div>
+              <div>im Browser. Keine Datenübertragung</div>
+              <div>ohne ausdrückliche Zustimmung.</div>
+              <div style={{marginTop:4}}>Bei freiwilliger Dateiübermittlung:</div>
+              <div>Speicherung bei KFZ Dietrich</div>
+              <div>ausschließlich für interne Forschung.</div>
+            </div>
+
+          </div>
+          <div style={{borderTop:"1px solid #111",paddingTop:8,textAlign:"center",
+            fontSize:7,color:"#383838",letterSpacing:1}}>
+            ME2.8 / ME2.8.1 DRIFT ANALYZER · NUR FÜR DEN INTERNEN GEBRAUCH ·
+            KFZ Dietrich · Hardegsen-Gladebeck · nils@kfz-dietrich.de
+          </div>
+        </div>
+      </div>
+
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
         *{box-sizing:border-box}
