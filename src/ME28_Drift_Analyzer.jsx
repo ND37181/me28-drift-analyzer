@@ -805,9 +805,9 @@ export default function App() {
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
                 {[
                   {t:"JSON Export",i:"{}",d:"Maschinenlesbar / alle Werte / fuer Weiterverarbeitung",
-                    fn:()=>downloadFile(buildExportJSON(analysis,tuneFile?.name,refFile?.name),"ME28_"+tuneFile?.name?.replace(/\.[^.]+$/,"")+".json","application/json")},
+                    fn:()=>downloadFile(buildExportJSON(analysis,tuneFile?.name,refFile?.name),"ME28_"+tuneFile?.name?.replace(/\.[^.]+$/,"")+"_Score"+Math.round(analysis.score)+"pct.json","application/json")},
                   {t:"Text Protokoll",i:"=",d:"Druckbares Pruefprotokoll / plain text",
-                    fn:()=>downloadFile(buildExportText(analysis,tuneFile?.name,refFile?.name),"ME28_Protokoll_"+tuneFile?.name?.replace(/\.[^.]+$/,"")+".txt","text/plain")},
+                    fn:()=>downloadFile(buildExportText(analysis,tuneFile?.name,refFile?.name),"ME28_Protokoll_"+tuneFile?.name?.replace(/\.[^.]+$/,"")+"_Score"+Math.round(analysis.score)+"pct.txt","text/plain")},
                 ].map(({t,i,d,fn})=>(
                   <div key={t} style={{background:"#0b0b0b",border:"1px solid #181818",borderRadius:8,padding:18,textAlign:"center"}}>
                     <div style={{fontSize:26,marginBottom:8,color:"#ff6b2b"}}>{i}</div>
