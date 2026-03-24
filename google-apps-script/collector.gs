@@ -15,11 +15,11 @@ const CONFIG = {
   // Google Drive Ordner-ID (aus der URL deines Drive-Ordners)
   // Beispiel: https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrS
   //                                                  ^^^^^^^^^^^^^^^^^^^^^ das ist die ID
-  DRIVE_FOLDER_ID: "HIER_DEINE_ORDNER_ID_EINFÜGEN",
+  DRIVE_FOLDER_ID: "1Lo8LXGeL4yBkI4fC3UFZazvynnmJoCGG",
 
   // Google Sheets ID für Metadaten-Log
   // Beispiel: https://docs.google.com/spreadsheets/d/1AbCdEfGhIjKlMnOpQrS/edit
-  SHEETS_ID: "HIER_DEINE_SHEETS_ID_EINFÜGEN",
+  SHEETS_ID: "1QYk8oN7UGw2Ftw6Um9WtP2I7hbByQeil223OIQA3xCg",
 
   // Maximale Dateigröße (600KB = 512KB Flash + Puffer)
   MAX_FILE_SIZE: 600000,
