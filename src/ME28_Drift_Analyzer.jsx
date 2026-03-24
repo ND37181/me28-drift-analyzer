@@ -544,6 +544,12 @@ export default function App() {
           <div>
             <div style={{fontSize:11,fontWeight:700,letterSpacing:3,color:"#ff6b2b"}}>ME2.8 DRIFT ANALYZER</div>
             <div style={{fontSize:8,color:"#909090",letterSpacing:2}}>v2 · ZWEI-DATEI-VERGLEICH · KFZ DIETRICH</div>
+          <div style={{fontSize:7,color:"#444",marginTop:6,letterSpacing:1,textAlign:"center",borderTop:"1px solid #1a1a1a",paddingTop:6}}>
+            NUR FÜR DEN INTERNEN GEBRAUCH · KEIN ÖFFENTLICHES ANGEBOT · KEINE GEWÄHRLEISTUNG
+          </div>
+          <div style={{fontSize:7,color:"#383838",marginTop:3,textAlign:"center"}}>
+            Betreiber: KFZ Dietrich · Hardegsen-Gladebeck · nils@kfz-dietrich.de
+          </div>
           </div>
         </div>
         {analysis&&<button onClick={reset} style={{background:"transparent",border:"1px solid #1a1a1a",
