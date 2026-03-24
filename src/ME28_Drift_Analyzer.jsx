@@ -1,3 +1,9 @@
+/**
+ * ME2.8 / ME2.8.1 Drift Analyzer
+ * © 2026 KFZ Dietrich, Nils Dietrich. Alle Rechte vorbehalten.
+ * Unbefugte Nutzung, Vervielfältigung oder Weitergabe ist untersagt.
+ * Nur für den internen Gebrauch bestimmt.
+ */
 import { useState, useCallback, useRef } from "react";
 
 const M1 = 0x8000;
@@ -548,7 +554,7 @@ export default function App() {
             NUR FÜR DEN INTERNEN GEBRAUCH · KEIN ÖFFENTLICHES ANGEBOT · KEINE GEWÄHRLEISTUNG
           </div>
           <div style={{fontSize:7,color:"#383838",marginTop:3,textAlign:"center"}}>
-            Betreiber: KFZ Dietrich · Hardegsen-Gladebeck · nils@kfz-dietrich.de
+            Betreiber: KFZ Dietrich · Hardegsen-Gladebeck · nils@kfz-dietrich.de · © 2026 Alle Rechte vorbehalten
           </div>
           </div>
         </div>
